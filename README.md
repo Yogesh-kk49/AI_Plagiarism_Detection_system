@@ -33,9 +33,7 @@ This system is designed for **academic use**, helping instructors and institutio
 
 **Frontend**
 
-* HTML
-* CSS
-* JavaScript
+* React
 
 ---
 
