@@ -10,6 +10,7 @@ This system is designed for **academic use**, helping instructors and institutio
 
 * Plagiarism detection between submitted documents
 * AI authorship likelihood detection
+* Machine Learning-based detection
 * Heuristic-based text analysis
 * Severity scoring system
 * Upload and analyze documents
