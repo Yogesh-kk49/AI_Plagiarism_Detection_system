@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+env/
+venv/
+
+# Dataset
+plagiarism_system/dataset/
+
+# Database
+db.sqlite3
+
+# Media uploads
+media/
+
+# Frontend dependencies
+node_modules/
+dist/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
