@@ -1,151 +1,190 @@
-# AI Plagiarism Detection System
+# 🤖 AI Plagiarism Detection System
 
-An intelligent plagiarism detection system built with **Django** that analyzes text or code submissions and detects possible plagiarism and AI-generated content using advanced heuristic techniques.
+An advanced **AI-powered plagiarism detection system** built using **Django**, designed to detect both **content similarity** and **AI-generated text** using heuristic and intelligent analysis techniques.
 
-This system is designed for **academic use**, helping instructors and institutions identify copied or AI-generated submissions efficiently.
-
----
-
-## Features
-
-* Plagiarism detection between submitted documents
-* AI authorship likelihood detection
-* Machine Learning-based detection
-* Heuristic-based text analysis
-* Severity scoring system
-* Upload and analyze documents
-* Fast processing for large files
-* Simple web interface for testing and analysis
+This project is ideal for **academic institutions, instructors, and evaluation systems** to identify copied or AI-assisted submissions effectively.
 
 ---
 
-## Tech Stack
+## 📌 Project Overview
 
-**Backend**
+The system analyzes uploaded documents or code and provides:
+
+* 🔍 **Plagiarism Detection Score**
+* 🤖 **AI Authorship Likelihood**
+* ⚠️ **Severity Levels (Low / Medium / High)**
+
+It combines **heuristic-based analysis** with structured evaluation techniques to simulate intelligent plagiarism detection without relying on heavy external APIs.
+
+---
+
+## ✨ Key Features
+
+* 📄 Document & code file upload
+* 🔍 Plagiarism detection between submissions
+* 🤖 AI-generated content detection (heuristic-based)
+* 📊 Severity scoring system (Low / Medium / High)
+* ⚡ Fast processing for large files
+* 🧠 Intelligent text pattern analysis
+* 🔐 OTP-based user authentication system
+* 👤 Secure user login & verification
+* 📁 File storage and management system
+* 🌐 Web-based interface for easy usage
+
+---
+
+## 🛠️ Tech Stack
+
+### **Backend**
 
 * Python
 * Django
 
-**Data Processing**
+### **Frontend**
 
-* Natural Language Processing
-* Heuristic text analysis
+* React (for UI components)
 
-**Frontend**
+### **Data Processing**
 
-* React
+* Natural Language Processing (NLP)
+* Heuristic-based text analysis
+
+### **Security**
+
+* OTP Authentication System
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
-```
-AI_PLAGARISM
+```bash id="z3k8df"
+AI_PLAGARISM/
 │
-├── plagiarism_system/     # Django project configuration
-├── detector/              # Main plagiarism detection app
-├── media/                 # Uploaded documents
+├── plagiarism_system/     # Django project settings
+├── detector/              # Core detection logic
+├── media/                 # Uploaded files
 │
 ├── manage.py              # Django management script
-├── requirements.txt       # Python dependencies
-├── .gitignore             # Files ignored by Git
-└── README.md              # Project documentation
+├── requirements.txt       # Dependencies
+├── db.sqlite3
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## Installation
+## ⚙️ Installation & Setup
 
-Clone the repository
+### 1️⃣ Clone the repository
 
-```
-git clone https://github.com/yourusername/AI-Plagiarism-Detection-System.git
+```bash id="k1g8xt"
+git clone https://github.com/YOUR_USERNAME/AI-Plagiarism-Detection-System.git
 cd AI-Plagiarism-Detection-System
 ```
 
-Create virtual environment
+### 2️⃣ Create virtual environment
 
-```
+```bash id="p8d9sd"
 python -m venv env
 ```
 
-Activate environment
+### 3️⃣ Activate environment
 
-Windows
+**Windows**
 
-```
+```bash id="w9x2ab"
 env\Scripts\activate
 ```
 
-Mac / Linux
+**Mac/Linux**
 
-```
+```bash id="m3d2ka"
 source env/bin/activate
 ```
 
-Install dependencies
+### 4️⃣ Install dependencies
 
-```
+```bash id="q7t1vn"
 pip install -r requirements.txt
 ```
 
-Run migrations
+### 5️⃣ Apply migrations
 
-```
+```bash id="v2n1px"
 python manage.py migrate
 ```
 
-Start the development server
+### 6️⃣ Run server
 
-```
+```bash id="y5b8rf"
 python manage.py runserver
 ```
 
-Open in browser
+👉 Open:
 
-```
-http://127.0.0.1:8000
+```id="g2x7lt"
+http://127.0.0.1:8000/
 ```
 
 ---
 
-## How It Works
+## 🔐 Authentication System
 
-1. User uploads a document or code file.
-2. The system analyzes text patterns and writing structure.
-3. Heuristic algorithms evaluate similarity and AI-generated indicators.
-4. A plagiarism score and AI likelihood score are generated.
-5. Results are displayed through the web interface.
+* OTP-based verification system implemented
+* Secure login flow
+* Prevents unauthorized access
+* Enhances reliability for academic usage
 
 ---
 
-## Example Use Cases
+## ⚙️ How It Works
+
+1. User uploads document or code file
+2. System preprocesses and analyzes text
+3. Heuristic algorithms detect:
+
+   * Similarity patterns
+   * AI-generated indicators
+4. Generates:
+
+   * 📊 Plagiarism Score
+   * 🤖 AI Likelihood Score
+   * ⚠️ Severity Level
+5. Displays results through web interface
+
+---
+
+## 🚀 Future Enhancements
+
+* Deep learning-based detection models
+* Large-scale dataset training
+* Multi-language & code detection
+* REST API integration
+* Advanced dashboard with analytics
+* LMS integration (Moodle, etc.)
+
+---
+
+## 🎯 Use Cases
 
 * Academic plagiarism detection
-* AI-generated assignment detection
+* AI-generated assignment identification
 * Code similarity checking
-* Educational research
+* Research and educational analysis
 
 ---
 
-## Future Improvements
-
-* Deep learning based detection models
-* Large scale dataset training
-* Multi-language code detection
-* Better UI dashboard
-* Integration with academic LMS systems
-
----
-
-## Author
+## 👨‍💻 Author
 
 **Yogesh K**
-
-Final Year Computer Science Project
+Final Year Computer Science Student
 
 ---
 
-## License
+## 📄 License
 
-This project is created for **educational and research purposes**.
+This project is developed for **educational and research purposes**.
+
+---
+
+⭐ If you found this project useful, consider giving it a star!
