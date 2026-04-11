@@ -84,41 +84,364 @@ const Spinner = () => (
 const ProfileCorner = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const initials = user?.name ? user.name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase() : "?";
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "?";
+
+  const handleLogoutClick = () => {
+    setOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
+
   return (
-    <div style={{position:"fixed",top:20,right:20,zIndex:100,animation:"slideDown 0.5s ease both 0.2s"}}>
-      <div style={{position:"relative"}}>
-        <button className="profile-avatar" onClick={()=>setOpen(o=>!o)} style={{width:46,height:46,borderRadius:"50%",border:"2px solid rgba(99,102,241,0.5)",background:"rgba(15,15,26,0.9)",padding:0,cursor:"pointer",boxShadow:"0 4px 16px rgba(0,0,0,0.4),0 0 0 4px rgba(99,102,241,0.08)",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(12px)"}}>
-          {user?.picture ? (
-            <img src={user.picture} alt={user.name||""} referrerPolicy="no-referrer" crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}
-              onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name||"User")}&background=6366f1&color=fff&bold=true`;}} />
-          ) : (
-            <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:16,color:"#a5b4fc"}}>{initials}</span>
-          )}
-        </button>
-        <span style={{position:"absolute",bottom:1,right:1,width:12,height:12,borderRadius:"50%",background:"#22c55e",border:"2px solid #0f0f1a",animation:"badge-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both 0.5s"}} />
-        {open && (
-          <>
-            <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,zIndex:50}} />
-            <div style={{position:"absolute",top:56,right:0,zIndex:200,background:"rgba(13,13,22,0.97)",backdropFilter:"blur(24px)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:16,padding:"1rem",minWidth:230,boxShadow:"0 20px 50px rgba(0,0,0,0.6)",animation:"scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both",transformOrigin:"top right"}}>
-              <div style={{marginBottom:"0.8rem",paddingBottom:"0.8rem",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-                <p style={{fontFamily:"Syne,sans-serif",fontWeight:700,color:"#f1f5f9",fontSize:"0.95rem"}}>{user?.name||"—"}</p>
-                <p style={{fontFamily:"DM Sans,sans-serif",color:"#94a3b8",fontSize:"0.78rem",marginTop:2}}>{user?.email||"—"}</p>
-                <div style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:6,padding:"3px 10px",borderRadius:99,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.35)",fontSize:"0.7rem",color:"#86efac",fontFamily:"DM Sans,sans-serif",fontWeight:600}}>
-                  <span style={{width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block"}} /> 2FA Verified
+    <>
+      <div
+        style={{
+          position: "fixed",
+          top: 20,
+          right: 20,
+          zIndex: 100,
+          animation: "slideDown 0.5s ease both 0.2s",
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          <button
+            className="profile-avatar"
+            onClick={() => setOpen((o) => !o)}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: "50%",
+              border: "2px solid rgba(99,102,241,0.5)",
+              background: "rgba(15,15,26,0.9)",
+              padding: 0,
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 0 4px rgba(99,102,241,0.08)",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.name || ""}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: "50%",
+                }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user.name || "User"
+                  )}&background=6366f1&color=fff&bold=true`;
+                }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  color: "#a5b4fc",
+                }}
+              >
+                {initials}
+              </span>
+            )}
+          </button>
+
+          <span
+            style={{
+              position: "absolute",
+              bottom: 1,
+              right: 1,
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "#22c55e",
+              border: "2px solid #0f0f1a",
+              animation: "badge-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both 0.5s",
+            }}
+          />
+
+          {open && (
+            <>
+              <div
+                onClick={() => setOpen(false)}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 50,
+                }}
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  top: 56,
+                  right: 0,
+                  zIndex: 200,
+                  background: "rgba(13,13,22,0.97)",
+                  backdropFilter: "blur(24px)",
+                  border: "1px solid rgba(99,102,241,0.2)",
+                  borderRadius: 16,
+                  padding: "1rem",
+                  minWidth: 230,
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+                  animation: "scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+                  transformOrigin: "top right",
+                }}
+              >
+                <div
+                  style={{
+                    marginBottom: "0.8rem",
+                    paddingBottom: "0.8rem",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 700,
+                      color: "#f1f5f9",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    {user?.name || "—"}
+                  </p>
+
+                  <p
+                    style={{
+                      fontFamily: "DM Sans, sans-serif",
+                      color: "#94a3b8",
+                      fontSize: "0.78rem",
+                      marginTop: 2,
+                    }}
+                  >
+                    {user?.email || "—"}
+                  </p>
+
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      marginTop: 6,
+                      padding: "3px 10px",
+                      borderRadius: 99,
+                      background: "rgba(34,197,94,0.12)",
+                      border: "1px solid rgba(34,197,94,0.35)",
+                      fontSize: "0.7rem",
+                      color: "#86efac",
+                      fontFamily: "DM Sans, sans-serif",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#22c55e",
+                        display: "inline-block",
+                      }}
+                    />
+                    2FA Verified
+                  </div>
                 </div>
+
+                <button
+                  className="history-drawer-btn"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/history");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.6rem 0.8rem",
+                    borderRadius: 10,
+                    border: "1px solid rgba(124,58,237,0.3)",
+                    background: "rgba(124,58,237,0.1)",
+                    color: "#c4b5fd",
+                    fontFamily: "DM Sans, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  📜 View History
+                </button>
+
+                <button
+                  className="logout-btn"
+                  onClick={handleLogoutClick}
+                  style={{
+                    width: "100%",
+                    padding: "0.6rem 0.8rem",
+                    borderRadius: 10,
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    background: "rgba(239,68,68,0.08)",
+                    color: "#fca5a5",
+                    fontFamily: "DM Sans, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  Sign Out
+                </button>
               </div>
-              <button className="history-drawer-btn" onClick={()=>{setOpen(false);navigate("/history");}} style={{width:"100%",padding:"0.6rem 0.8rem",borderRadius:10,border:"1px solid rgba(124,58,237,0.3)",background:"rgba(124,58,237,0.1)",color:"#c4b5fd",fontFamily:"DM Sans,sans-serif",fontWeight:600,fontSize:"0.85rem",cursor:"pointer",transition:"all 0.2s ease",marginBottom:"0.5rem"}}>
-                📜 View History
+            </>
+          )}
+        </div>
+      </div>
+
+      {showLogoutConfirm && (
+        <div
+          onClick={handleCancelLogout}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2,6,23,0.72)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            zIndex: 1000,
+            animation: "overlayFade 0.2s ease both",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              borderRadius: "22px",
+              background: "linear-gradient(180deg, rgba(17,24,39,0.98), rgba(15,23,42,0.96))",
+              border: "1px solid rgba(248,113,113,0.22)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
+              overflow: "hidden",
+              animation: "scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+            }}
+          >
+            <div
+              style={{
+                padding: "1.4rem 1.5rem 1rem 1.5rem",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(239,68,68,0.14)",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  fontSize: "1.4rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                🔒
+              </div>
+
+              <h2
+                style={{
+                  fontSize: "1.3rem",
+                  fontWeight: 800,
+                  color: "#f8fafc",
+                  marginBottom: "0.5rem",
+                  fontFamily: "Syne, sans-serif",
+                }}
+              >
+                Sign out of your account?
+              </h2>
+
+              <p
+                style={{
+                  color: "#94a3b8",
+                  lineHeight: 1.7,
+                  fontSize: "0.95rem",
+                }}
+              >
+                You are about to end your current session on this device. You can sign in again anytime using your Google account and OTP verification.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: "1rem 1.5rem 1.4rem 1.5rem",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.85rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={handleCancelLogout}
+                style={{
+                  padding: "11px 18px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "#cbd5e1",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
               </button>
-              <button className="logout-btn" onClick={onLogout} style={{width:"100%",padding:"0.6rem 0.8rem",borderRadius:10,border:"1px solid rgba(239,68,68,0.3)",background:"rgba(239,68,68,0.08)",color:"#fca5a5",fontFamily:"DM Sans,sans-serif",fontWeight:600,fontSize:"0.85rem",cursor:"pointer",transition:"all 0.2s ease"}}>
-                Sign Out
+
+              <button
+                onClick={handleConfirmLogout}
+                style={{
+                  padding: "11px 18px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(248,113,113,0.35)",
+                  background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  minWidth: "150px",
+                  boxShadow: "0 12px 24px rgba(185,28,28,0.28)",
+                }}
+              >
+                Yes, Sign Out
               </button>
             </div>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -170,29 +493,46 @@ const AboutPanel = () => (
 /* ════════════════════════════════════════
    HELP PANEL
 ════════════════════════════════════════ */
-const HelpPanel = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+const HelpPanel = ({ isLoggedIn }) => {
+  const navigate = useNavigate();
+  const [hover, setHover] = useState(false);
   const [category, setCategory] = useState("bug");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!name.trim() || !email.trim() || !message.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:8000/api/feedback/", {
-        method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
-        body: JSON.stringify({ name, email, category, message }),
-      });
-      const data = await res.json();
-      if (res.ok) setSubmitted(true);
-      else alert(data.error || "Submission failed. Try again.");
-    } catch { alert("Network error. Check your connection."); }
-    finally { setLoading(false); }
-  };
+  if (!message.trim()) return;
 
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch("http://localhost:8000/api/feedback/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ category, message }),
+    });
+
+    const data = await res.json();
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        if (res.status === 403) {
+          setError("🔒 Please login to submit feedback");
+        } else {
+          setError(data.error || "Something went wrong");
+        }
+      }
+    } catch {
+      setError("Network error. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
   const inputStyle = {
     width:"100%", padding:"0.9rem 1rem", borderRadius:12,
     border:"1px solid rgba(255,255,255,0.15)", background:"rgba(255,255,255,0.06)",
@@ -207,7 +547,10 @@ const HelpPanel = () => {
       <p style={{fontFamily:"DM Sans,sans-serif",color:"#cbd5e1",fontSize:"0.9rem",lineHeight:1.75,maxWidth:280}}>
         Thank you for reaching out. We'll review your message and get back to you within 24–48 hours.
       </p>
-      <button onClick={()=>{setSubmitted(false);setName("");setEmail("");setMessage("");}}
+      <button onClick={()=>{
+                setSubmitted(false);
+                setMessage("");
+              }}
         style={{marginTop:"1.5rem",padding:"0.7rem 1.6rem",borderRadius:12,border:"1px solid rgba(99,102,241,0.4)",background:"rgba(99,102,241,0.15)",color:"#c7d2fe",fontFamily:"Syne,sans-serif",fontWeight:700,fontSize:"0.85rem",cursor:"pointer"}}>
         Send Another
       </button>
@@ -241,27 +584,150 @@ const HelpPanel = () => {
           </div>
         ))}
       </div>
+  
 
-      <p style={{fontFamily:"Syne,sans-serif",fontWeight:700,color:"#f1f5f9",fontSize:"0.97rem",marginBottom:"1rem"}}>📬 Submit Feedback</p>
+      <p
+  style={{
+    fontFamily: "Syne,sans-serif",
+    fontWeight: 700,
+    color: "#f1f5f9",
+    fontSize: "0.97rem",
+    marginBottom: "1rem",
+  }}
+>
+  📬 Submit Feedback
+</p>
 
-      <input className="feedback-input" style={inputStyle} placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} />
-      <input className="feedback-input" style={inputStyle} placeholder="Your email address" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
-      <select className="feedback-select" value={category} onChange={e=>setCategory(e.target.value)}
-        style={{...inputStyle,cursor:"pointer",appearance:"none",WebkitAppearance:"none"}}>
-        <option value="bug">🐛 Bug Report</option>
-        <option value="feature">✨ Feature Request</option>
-        <option value="account">🔐 Account Issue</option>
-        <option value="other">💬 Other</option>
-      </select>
-      <textarea className="feedback-textarea" rows={5} style={{...inputStyle,resize:"vertical",lineHeight:1.75}}
-        placeholder="Describe your issue or suggestion in detail..." value={message} onChange={e=>setMessage(e.target.value)} />
+{!isLoggedIn ? (
+  <div
+    style={{
+      textAlign: "center",
+      padding: "1.5rem",
+      borderRadius: 12,
+      background: "rgba(239,68,68,0.08)",
+      border: "1px solid rgba(239,68,68,0.3)",
+    }}
+  >
+    <p style={{ color: "#f87171", fontWeight: 600 }}>
+      🔒 Login required to submit feedback
+    </p>
 
-      <button className="submit-btn" onClick={handleSubmit} disabled={loading||!name.trim()||!email.trim()||!message.trim()}
-        style={{width:"100%",padding:"1rem",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6366f1,#4f46e5)",color:"#fff",fontFamily:"Syne,sans-serif",fontWeight:700,fontSize:"0.97rem",cursor:"pointer",transition:"all 0.25s ease",boxShadow:"0 4px 20px rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-        {loading ? <><span style={{width:16,height:16,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",animation:"spin 0.7s linear infinite",display:"inline-block"}} />Sending...</> : "Send Feedback →"}
-      </button>
-    </div>
-  );
+    <button
+      onClick={() => navigate("/login")}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        marginTop: "0.8rem",
+        padding: "0.6rem 1.4rem",
+        borderRadius: 10,
+        border: "none",
+        background: hover ? "#4f46e5" : "#6366f1",
+        color: "#fff",
+        cursor: "pointer",
+        transition: "all 0.25s ease",
+        transform: hover ? "translateY(-1px)" : "translateY(0)",
+        boxShadow: hover
+          ? "0 6px 20px rgba(99,102,241,0.5)"
+          : "0 3px 10px rgba(99,102,241,0.3)"
+      }}
+    >
+      Login →
+    </button>
+  </div>
+) : (
+  <>
+    {error && (
+      <div
+        style={{
+          padding: "0.8rem",
+          borderRadius: 10,
+          background: "rgba(239,68,68,0.15)",
+          border: "1px solid rgba(239,68,68,0.4)",
+          color: "#fca5a5",
+          marginBottom: "1rem",
+          fontSize: "0.85rem",
+        }}
+      >
+        {error}
+      </div>
+    )}
+
+    <select
+      className="feedback-select"
+      value={category}
+      onChange={(e) => setCategory(e.target.value)}
+      style={{
+        ...inputStyle,
+        cursor: "pointer",
+        appearance: "none",
+        WebkitAppearance: "none",
+      }}
+    >
+      <option value="bug">🐛 Bug Report</option>
+      <option value="feature">✨ Feature Request</option>
+      <option value="account">🔐 Account Issue</option>
+      <option value="other">💬 Other</option>
+    </select>
+
+    <textarea
+      className="feedback-textarea"
+      rows={5}
+      style={{
+        ...inputStyle,
+        resize: "vertical",
+        lineHeight: 1.75,
+      }}
+      placeholder="Describe your issue or suggestion in detail..."
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+    />
+
+    <button
+      className="submit-btn"
+      onClick={handleSubmit}
+      disabled={loading || !message.trim()}
+      style={{
+        width: "100%",
+        padding: "1rem",
+        borderRadius: 14,
+        border: "none",
+        background: "linear-gradient(135deg,#6366f1,#4f46e5)",
+        color: "#fff",
+        fontFamily: "Syne,sans-serif",
+        fontWeight: 700,
+        fontSize: "0.97rem",
+        cursor: "pointer",
+        transition: "all 0.25s ease",
+        boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+      }}
+    >
+      {loading ? (
+        <>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              border: "2px solid rgba(255,255,255,0.3)",
+              borderTopColor: "#fff",
+              animation: "spin 0.7s linear infinite",
+              display: "inline-block",
+            }}
+          />
+          Sending...
+        </>
+      ) : (
+        "Send Feedback →"
+      )}
+    </button>
+  </>
+)}
+</div>
+);
 };
 
 /* ════════════════════════════════════════
@@ -311,7 +777,7 @@ const TermsPanel = () => (
 /* ════════════════════════════════════════
    HAMBURGER DRAWER
 ════════════════════════════════════════ */
-const HamburgerDrawer = ({ open, onClose }) => {
+const HamburgerDrawer = ({ open, onClose, isVerified }) => {
   const [activeSection, setActiveSection] = useState(null);
 
   const menuItems = [
@@ -389,7 +855,7 @@ const HamburgerDrawer = ({ open, onClose }) => {
             </div>
             </div>
           ) : activeSection === "about" ? <AboutPanel />
-            : activeSection === "help"  ? <HelpPanel />
+            : activeSection === "help"  ? <HelpPanel isLoggedIn={isVerified} />
             : <TermsPanel />
           }
         </div>
@@ -476,7 +942,11 @@ export default function Options() {
       </div>
 
       {isVerified && user ? <ProfileCorner user={user} onLogout={handleLogout} /> : <GuestCorner onLogin={()=>navigate("/login")} />}
-      <HamburgerDrawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} />
+      <HamburgerDrawer 
+        open={drawerOpen} 
+        onClose={()=>setDrawerOpen(false)} 
+        isVerified={isVerified}
+      />
 
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:780}}>
         <div style={{textAlign:"center",marginBottom:"3rem",animation:"fadeUp 0.6s ease both"}}>

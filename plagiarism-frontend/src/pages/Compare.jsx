@@ -2,6 +2,285 @@ import { useState, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
+// ── PDF Download Button ──
+const DownloadPDFButton = ({ aiResult, fileName, activeTab }) => {
+  const [downloading, setDownloading] = useState(false);
+  const loadScript = (src) => {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+};
+  const handleDownload = async () => {
+  setDownloading(true);
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    const pageWidth    = pdf.internal.pageSize.getWidth();
+    const pageHeight   = pdf.internal.pageSize.getHeight();
+    const margin       = 15;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    const theme = {
+      primary: [22, 78, 99],    accent:  [14, 116, 144],
+      text:    [33, 37, 41],    muted:   [108, 117, 125],
+      light:   [248, 249, 250], border:  [222, 226, 230],
+      success: [25, 135, 84],   danger:  [220, 53, 69],
+      warning: [255, 193, 7],   white:   [255, 255, 255],
+    };
+
+    const clean = (str) =>
+      String(str)
+        .replace(/[\u2018\u2019\u02BC]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u2013/g, "-")
+        .replace(/\u2014/g, "--")
+        .replace(/\u2026/g, "...")
+        .replace(/[\uD800-\uDFFF]/g, "")
+        .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
+        .replace(/[^\x00-\xFF]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+    const resetText = (size = 10, style = "normal", color = theme.text) => {
+      pdf.setFont("helvetica", style);
+      pdf.setFontSize(size);
+      pdf.setTextColor(...color);
+    };
+
+    const now    = new Date();
+    const normalizePercent = (val) => {
+      const num = Number(val || 0);
+      return num <= 1 ? Math.round(num * 100) : Math.round(num);
+    };
+
+    const aiPercent = normalizePercent(aiResult?.ai_probability);
+    const humanPercent = normalizePercent(aiResult?.human_probability);
+    const verdict = aiResult?.label || "Unknown";
+    const verdictColor =
+      verdict.includes("AI") ? theme.danger :
+      verdict.includes("Human") ? theme.success :
+      theme.warning;
+
+    const addHeader = () => {
+      pdf.setFillColor(...theme.primary);
+      pdf.rect(0, 0, pageWidth, 26, "F");
+      resetText(17, "bold", theme.white);
+      pdf.text("AI Content Detection Report", margin, 11);
+      resetText(8, "normal", [180, 210, 220]);
+      pdf.text(clean(`Generated: ${now.toLocaleString()}`), margin, 19);
+      pdf.setDrawColor(...theme.border);
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, 28, pageWidth - margin, 28);
+    };
+
+    const addFooter = (pageNo) => {
+      pdf.setDrawColor(...theme.border);
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+      resetText(8, "normal", theme.muted);
+      pdf.text("Confidential AI analysis summary", margin, pageHeight - 6);
+      pdf.text(clean(`Page ${pageNo}`), pageWidth - margin, pageHeight - 6, { align: "right" });
+    };
+
+    const checkPageBreak = (needed = 10) => {
+      if (y + needed > pageHeight - 18) {
+        addFooter(pdf.getNumberOfPages());
+        pdf.addPage();
+        addHeader();
+        resetText();
+        y = 36;
+      }
+    };
+
+    const drawSectionTitle = (title) => {
+      checkPageBreak(12);
+      resetText(10, "bold", theme.primary);
+      pdf.text(clean(title), margin, y);
+      y += 2;
+      pdf.setDrawColor(...theme.border);
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, y + 1, pageWidth - margin, y + 1);
+      y += 7;
+    };
+
+    const drawLabelValue = (label, value) => {
+      checkPageBreak(7);
+      resetText(9, "bold", theme.text);
+      pdf.text(clean(`${label}:`), margin, y);
+      resetText(9, "normal", theme.muted);
+      pdf.text(clean(String(value)), margin + 42, y);
+      y += 6;
+    };
+
+    const drawCard = (x, cardY, w, h, title, value, color = theme.primary) => {
+      pdf.setFillColor(...theme.light);
+      pdf.setDrawColor(...theme.border);
+      pdf.roundedRect(x, cardY, w, h, 2, 2, "FD");
+      resetText(8, "normal", theme.muted);
+      pdf.text(clean(title), x + 4, cardY + 7);
+      resetText(13, "bold", color);
+      pdf.text(clean(String(value)), x + 4, cardY + 16, { maxWidth: w - 8 });
+    };
+
+    const drawProgressBar = (label, value, color) => {
+      checkPageBreak(14);
+      resetText(9, "normal", theme.muted);
+      pdf.text(clean(label), margin, y);
+      resetText(9, "bold", theme.text);
+      pdf.text(clean(`${value}%`), pageWidth - margin, y, { align: "right" });
+      y += 4;
+      pdf.setFillColor(226, 229, 233);
+      pdf.roundedRect(margin, y, contentWidth, 3.5, 1.5, 1.5, "F");
+      pdf.setFillColor(...color);
+      const fillW = Math.max((contentWidth * value) / 100, 3);
+      pdf.roundedRect(margin, y, fillW, 3.5, 1.5, 1.5, "F");
+      y += 9;
+    };
+
+    addHeader();
+    y = 36;
+
+    pdf.setFillColor(245, 247, 250);
+    pdf.setDrawColor(...theme.border);
+    pdf.roundedRect(margin, y, contentWidth, 22, 3, 3, "FD");
+
+    resetText(10, "bold", theme.text);
+    pdf.text("Executive Summary", margin + 5, y + 7);
+
+    resetText(8, "normal", theme.muted);
+    const source =
+      activeTab === "upload" && fileName
+        ? fileName
+        : "Pasted Code";
+    const srcLines = pdf.splitTextToSize(clean(`Source: ${source}`), contentWidth - 60);
+    pdf.text(srcLines, margin + 5, y + 13);
+
+
+    // Badge positioning - adjusted to be slightly left-aligned for better balance
+    const badgeLabel = clean(verdict);
+    resetText(8, "bold", theme.white);
+    const badgePad = 5;
+    const badgeW   = pdf.getTextWidth(badgeLabel) + badgePad * 2;
+    const badgeH   = 8;
+    // Position badge with some offset from the right edge for better visual balance
+    const badgeX   = pageWidth - margin - badgeW - 10; // Added 10mm offset from right
+    const badgeY   = y + 5;
+    pdf.setFillColor(...verdictColor);
+    pdf.roundedRect(badgeX, badgeY, badgeW, badgeH, 4, 4, "F");
+    resetText(8, "bold", theme.white);
+    pdf.text(badgeLabel, badgeX + badgeW / 2, badgeY + 5.5, { align: "center" });
+
+    y += 29;
+
+    drawSectionTitle("Summary Metrics");
+    const cardY = y;
+    const gap   = 5;
+    const cardW = (contentWidth - gap * 2) / 3;
+    drawCard(margin, cardY, cardW, 22,
+      "AI Probability",
+      `${aiPercent}%`,
+      theme.danger
+    );
+
+    drawCard(margin + cardW + gap, cardY, cardW, 22,
+      "Human Probability",
+      `${humanPercent}%`,
+      theme.success
+    );
+
+    drawCard(margin + (cardW + gap) * 2, cardY, cardW, 22,
+      "Verdict",
+      verdict,
+      theme.accent
+    );
+    y += 28;
+
+    drawSectionTitle("Probability Breakdown");
+    drawProgressBar("AI Probability", aiPercent, theme.danger);
+    drawProgressBar("Human Probability", humanPercent, theme.success);
+    drawLabelValue("Date",    clean(now.toLocaleString()));
+    drawLabelValue("Source",  clean(source));
+    drawLabelValue("Verdict", clean(verdict));
+
+    y += 2;
+    drawSectionTitle("Analysis Summary");
+
+    const summary =
+      aiPercent > 70
+        ? "The submitted code strongly matches patterns typically generated by AI."
+        : aiPercent > 40
+        ? "The code shows mixed characteristics of AI and human writing."
+        : "The code is likely written by a human.";
+
+    const lines = pdf.splitTextToSize(summary, contentWidth);
+    checkPageBreak(lines.length * 5);
+    pdf.text(lines, margin, y);
+    y += lines.length * 5 + 4;
+
+    addFooter(pdf.getNumberOfPages());
+    pdf.save("Code_Analysis_Report.pdf");
+
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    alert("Failed to generate PDF. Please try again.");
+  } finally {
+    setDownloading(false);
+  }
+};
+
+  return (
+    <button
+      className="download-btn-up"
+      onClick={handleDownload}
+      disabled={downloading}
+      style={{
+        width:"100%", padding:"15px", fontSize:"0.98rem",
+        background: downloading
+          ? "rgba(20,184,166,0.1)"
+          : "linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #0891b2 100%)",
+        color: downloading ? "#64748b" : "#ffffff",
+        border: downloading ? "1px solid rgba(20,184,166,0.25)" : "1px solid rgba(20,184,166,0.5)",
+        borderRadius:16, cursor: downloading ? "not-allowed" : "pointer",
+        fontFamily:"Inter, sans-serif", fontWeight:700,
+        boxShadow: downloading ? "none" : "0 10px 32px rgba(20,184,166,0.35)",
+        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+        transition:"all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+        marginTop: "12px",
+        opacity: downloading ? 0.7 : 1,
+      }}
+    >
+      {downloading ? (
+        <>
+          <span style={{
+            width:16, height:16, borderRadius:"50%",
+            border:"2.5px solid rgba(255,255,255,0.2)",
+            borderTopColor:"rgba(255,255,255,0.8)",
+            animation:"spinSmooth 0.8s linear infinite", display:"inline-block"
+          }} />
+          Generating PDF…
+        </>
+      ) : (
+        <>
+          <span style={{ fontSize:"1.1rem" }}>⬇️</span>
+          Download Report as PDF
+        </>
+      )}
+    </button>
+  );
+};
+
 const injectStyles = () => {
   if (document.getElementById("ca-styles")) return;
   const tag = document.createElement("style");
@@ -560,7 +839,7 @@ export default function CodeAnalyzer() {
         </div>
 
         {/* RIGHT PANEL - Results */}
-        <div style={{width:"50%", overflowY:"auto", padding:"32px 40px 32px", 
+        <div style={{width:"50%", overflowY:"auto", padding:"32px 40px 32px", height:"100%",flexDirection:"column", overflow:"hidden",
           scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent",
           background:"rgba(0,0,0,0.1)", backdropFilter:"blur(8px)"}}>
 
@@ -586,7 +865,17 @@ export default function CodeAnalyzer() {
           )}
 
           {result && (
-            <div style={{animation:"fadeInSmooth 0.5s ease both"}}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%"
+            }}>
+
+              {/* SCROLL AREA */}
+              <div style={{
+                flex: 1,
+                overflowY: "auto"
+              }}>
 
               <div style={{display:"flex", alignItems:"center", gap:16, marginBottom:"2rem", position:"relative"}}>
                 <div style={{flex:1, height:2, background:"linear-gradient(90deg, rgba(99,102,241,0.5), transparent)"}} />
@@ -720,7 +1009,14 @@ export default function CodeAnalyzer() {
                   </div>
                 </Card>
               )}
-
+              </div>
+              <div style={{ marginTop: "12px" }}>
+                <DownloadPDFButton 
+                  aiResult={result} 
+                  fileName={file?.name} 
+                  activeTab={activeTab}
+                />
+              </div>
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { jsPDF } from "jspdf";
 
 /* ─────────────────────────────────────────────────────────────────
    BACKGROUND FIX
@@ -267,7 +268,7 @@ export default function Similarity() {
   const [isVerified,    setIsVerified]    = useState(false);
   const [authLoading,   setAuthLoading]   = useState(true);
 
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const BASE_URL = "http://localhost:8000";
 
   useEffect(() => {
     forceBg();
@@ -490,6 +491,394 @@ export default function Similarity() {
     setSelectedDocs({});
   };
 
+const generatePDF = () => {
+  const data = Array.isArray(results)
+    ? results
+    : Array.isArray(results?.results)
+    ? results.results
+    : Array.isArray(results?.data)
+    ? results.data
+    : [];
+
+  if (!data.length) {
+    alert("No valid results available to export.");
+    return;
+  }
+
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  let y = 20;
+
+  const colors = {
+    text: [31, 41, 55],
+    muted: [107, 114, 128],
+    lightText: [156, 163, 175],
+    border: [229, 231, 235],
+    card: [248, 250, 252],
+    white: [255, 255, 255],
+    primary: [37, 99, 235],
+    primarySoft: [219, 234, 254],
+    success: [22, 163, 74],
+    successSoft: [220, 252, 231],
+    warning: [217, 119, 6],
+    warningSoft: [254, 243, 199],
+    danger: [220, 38, 38],
+    dangerSoft: [254, 226, 226],
+    skipped: [180, 83, 9],
+    skippedSoft: [255, 247, 237],
+    barBg: [229, 231, 235],
+    headerBg: [15, 23, 42],
+    sectionBg: [241, 245, 249],
+  };
+
+  const formatDate = () => new Date().toLocaleString();
+
+  const getSeverity = (pct) => {
+    if (pct >= 70) {
+      return { label: "High similarity", color: colors.danger, soft: colors.dangerSoft };
+    }
+    if (pct >= 40) {
+      return { label: "Moderate similarity", color: colors.warning, soft: colors.warningSoft };
+    }
+    return { label: "Low similarity", color: colors.success, soft: colors.successSoft };
+  };
+
+  const addPageIfNeeded = (requiredHeight = 20) => {
+    if (y + requiredHeight > pageHeight - 16) {
+      pdf.addPage();
+      y = 18;
+      drawPageHeaderMini();
+    }
+  };
+
+  const drawText = (text, x, yPos, options = {}) => {
+    const {
+      size = 10,
+      color = colors.text,
+      style = "normal",
+      align = "left",
+      maxWidth,
+    } = options;
+
+    pdf.setFont("helvetica", style);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...color);
+
+    const safeText = text == null ? "" : String(text);
+
+    if (maxWidth) {
+      const lines = pdf.splitTextToSize(safeText, maxWidth);
+      pdf.text(lines, x, yPos, { align });
+      return lines.length * (size * 0.42);
+    }
+
+    pdf.text(safeText, x, yPos, { align });
+    return size * 0.42;
+  };
+
+  const drawRoundedBox = (x, yPos, w, h, fillColor, radius = 4) => {
+    pdf.setFillColor(...fillColor);
+    pdf.roundedRect(x, yPos, w, h, radius, radius, "F");
+  };
+
+  const drawStatusChip = (label, x, yPos, color, softColor) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    const textWidth = pdf.getTextWidth(label);
+    const chipWidth = textWidth + 10;
+    const chipHeight = 7;
+
+    pdf.setFillColor(...softColor);
+    pdf.roundedRect(x, yPos, chipWidth, chipHeight, 3, 3, "F");
+    pdf.setTextColor(...color);
+    pdf.text(label, x + chipWidth / 2, yPos + 4.7, { align: "center" });
+  };
+
+  const drawProgressBar = (x, yPos, w, h, pct, fillColor) => {
+    const safePct = Math.max(0, Math.min(Number(pct) || 0, 100));
+
+    pdf.setFillColor(...colors.barBg);
+    pdf.roundedRect(x, yPos, w, h, 2, 2, "F");
+
+    const fillWidth = Math.max((w * safePct) / 100, safePct > 0 ? 2 : 0);
+    pdf.setFillColor(...fillColor);
+    pdf.roundedRect(x, yPos, fillWidth, h, 2, 2, "F");
+  };
+
+  const drawPageHeaderMini = () => {
+    pdf.setDrawColor(...colors.border);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    drawText("Document Similarity Report", margin, y, {
+      size: 11,
+      style: "bold",
+      color: colors.text,
+    });
+
+    drawText(`Generated: ${formatDate()}`, pageWidth - margin, y, {
+      size: 8,
+      color: colors.muted,
+      align: "right",
+    });
+
+    y += 8;
+  };
+
+  const normalResults = data.filter((r) => r?.type !== "skipped");
+  const skippedResults = data.filter((r) => r?.type === "skipped");
+  const avgSimilarity =
+    normalResults.length > 0
+      ? Math.round(
+          normalResults.reduce(
+            (sum, item) => sum + (Number(item?.similarity_percentage) || 0),
+            0
+          ) / normalResults.length
+        )
+      : 0;
+
+  const highCount = normalResults.filter(
+    (r) => (Number(r?.similarity_percentage) || 0) >= 70
+  ).length;
+
+  const moderateCount = normalResults.filter((r) => {
+    const pct = Number(r?.similarity_percentage) || 0;
+    return pct >= 40 && pct < 70;
+  }).length;
+
+  const lowCount = normalResults.filter(
+    (r) => (Number(r?.similarity_percentage) || 0) < 40
+  ).length;
+
+  // UPDATED HEADER - matching AI detection report style
+  // Header background
+  pdf.setFillColor(...colors.headerBg);
+  pdf.rect(0, 0, pageWidth, 26, "F");
+  
+  // Main title
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(17);
+  pdf.setTextColor(...colors.white);
+  pdf.text("Document Similarity Report", margin, 11);
+  
+  // Subtitle with date
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.setTextColor(180, 210, 220);
+  pdf.text(`Generated: ${formatDate()}`, margin, 19);
+  
+  // Bottom border line
+  pdf.setDrawColor(...colors.border);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, 28, pageWidth - margin, 28);
+
+  y = 38;
+
+  drawText("Overview", margin, y, {
+    size: 12,
+    style: "bold",
+    color: colors.text,
+  });
+
+  y += 6;
+
+  const gap = 4;
+  const cardW = (contentWidth - gap * 3) / 4;
+  const cardH = 22;
+
+  const summaryCards = [
+    { title: "Compared", value: `${normalResults.length}`, fill: colors.primarySoft, color: colors.primary },
+    { title: "Average", value: `${avgSimilarity}%`, fill: colors.sectionBg, color: colors.text },
+    { title: "High risk", value: `${highCount}`, fill: colors.dangerSoft, color: colors.danger },
+    { title: "Skipped", value: `${skippedResults.length}`, fill: colors.skippedSoft, color: colors.skipped },
+  ];
+
+  summaryCards.forEach((card, i) => {
+    const x = margin + i * (cardW + gap);
+    drawRoundedBox(x, y, cardW, cardH, card.fill, 4);
+
+    drawText(card.title, x + 4, y + 7, {
+      size: 8.5,
+      color: colors.muted,
+      style: "bold",
+    });
+
+    drawText(card.value, x + 4, y + 16, {
+      size: 14,
+      color: card.color,
+      style: "bold",
+    });
+  });
+
+  y += 30;
+
+  if (normalResults.length > 0) {
+    addPageIfNeeded(26);
+
+    drawText("Similarity distribution", margin, y, {
+      size: 12,
+      style: "bold",
+    });
+
+    y += 6;
+
+    const distribution = [
+      { label: "Low", count: lowCount, color: colors.success },
+      { label: "Moderate", count: moderateCount, color: colors.warning },
+      { label: "High", count: highCount, color: colors.danger },
+    ];
+
+    distribution.forEach((item, index) => {
+      const rowY = y + index * 9;
+      const pct = normalResults.length
+        ? Math.round((item.count / normalResults.length) * 100)
+        : 0;
+
+      drawText(item.label, margin, rowY + 4, {
+        size: 9,
+        style: "bold",
+        color: item.color,
+      });
+
+      drawProgressBar(margin + 24, rowY + 1.5, 95, 4, pct, item.color);
+
+      drawText(`${item.count} (${pct}%)`, margin + 125, rowY + 4, {
+        size: 9,
+        color: colors.muted,
+      });
+    });
+
+    y += 32;
+  }
+
+  addPageIfNeeded(20);
+  drawText("Detailed comparisons", margin, y, {
+    size: 12,
+    style: "bold",
+    color: colors.text,
+  });
+
+  y += 8;
+
+  data.forEach((r, index) => {
+    if (r?.type === "skipped") {
+      const reasonText = `Reason: ${r?.reason || "No reason provided"}`;
+      const reasonLines = pdf.splitTextToSize(reasonText, contentWidth - 10);
+      const cardHeight = Math.max(20, 14 + reasonLines.length * 4.5);
+
+      addPageIfNeeded(cardHeight + 6);
+
+      drawRoundedBox(margin, y, contentWidth, cardHeight, colors.skippedSoft, 5);
+      
+      const badgeX = margin + 4 + 10;
+      drawStatusChip("Skipped", badgeX, y + 4, colors.skipped, colors.white);
+
+      drawText(
+        `${r?.name1 || r?.document_1_name || "Document 1"} vs ${r?.name2 || r?.document_2_name || "Document 2"}`,
+        margin + 4,
+        y + 14,
+        {
+          size: 10,
+          style: "bold",
+          color: colors.text,
+          maxWidth: contentWidth - 8,
+        }
+      );
+
+      drawText(reasonText, margin + 4, y + 20, {
+        size: 9,
+        color: colors.muted,
+        maxWidth: contentWidth - 8,
+      });
+
+      y += cardHeight + 6;
+      return;
+    }
+
+    const pct = Math.max(0, Math.min(Number(r?.similarity_percentage) || 0, 100));
+    const severity = getSeverity(pct);
+
+    const leftTitle = r?.document_1_name || r?.name1 || "Document 1";
+    const rightTitle = r?.document_2_name || r?.name2 || "Document 2";
+
+    const leftLines = pdf.splitTextToSize(leftTitle, contentWidth - 45);
+    const rightLines = pdf.splitTextToSize(rightTitle, contentWidth - 45);
+    const textBlockHeight = (leftLines.length + rightLines.length) * 5;
+    const cardHeight = Math.max(34, 22 + textBlockHeight);
+
+    addPageIfNeeded(cardHeight + 6);
+
+    drawRoundedBox(margin, y, contentWidth, cardHeight, colors.card, 5);
+    pdf.setDrawColor(...colors.border);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(margin, y, contentWidth, cardHeight, 5, 5, "S");
+
+    const badgeX = margin + 4 + 10;
+    drawStatusChip(severity.label, badgeX, y + 4, severity.color, severity.soft);
+
+    drawText(`#${index + 1}`, pageWidth - margin - 6, y + 9, {
+      size: 8.5,
+      color: colors.lightText,
+      align: "right",
+      style: "bold",
+    });
+
+    drawText(`${pct}%`, pageWidth - margin - 6, y + 18, {
+      size: 18,
+      style: "bold",
+      color: severity.color,
+      align: "right",
+    });
+
+    let textY = y + 16;
+
+    drawText(leftTitle, margin + 4, textY, {
+      size: 10,
+      style: "bold",
+      color: colors.text,
+      maxWidth: contentWidth - 42,
+    });
+
+    textY += leftLines.length * 4.5 + 1;
+
+    drawText(rightTitle, margin + 4, textY, {
+      size: 10,
+      style: "normal",
+      color: colors.muted,
+      maxWidth: contentWidth - 42,
+    });
+
+    const barY = y + cardHeight - 8;
+    drawProgressBar(margin + 4, barY, contentWidth - 8, 4.5, pct, severity.color);
+
+    y += cardHeight + 6;
+  });
+
+  addPageIfNeeded(16);
+  pdf.setDrawColor(...colors.border);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 7;
+
+  drawText("End of report", margin, y, {
+    size: 9,
+    color: colors.muted,
+    style: "bold",
+  });
+
+  drawText("Generated using automated similarity analysis", pageWidth - margin, y, {
+    size: 8.5,
+    color: colors.lightText,
+    align: "right",
+  });
+
+  pdf.save("Document_Comparison_Report.pdf");
+};
   const successResults = results.filter(r => r.type === "result");
   const skippedResults = results.filter(r => r.type === "skipped");
   const hasResults     = results.length > 0;
@@ -811,6 +1200,25 @@ export default function Similarity() {
                     </span>
                   </div>
                 ))}
+              </div>
+              <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
+                <button
+                  onClick={generatePDF}
+                  style={{
+                    padding: "14px 28px",
+                    borderRadius: "14px",
+                    border: "1px solid rgba(251,191,36,0.4)",
+                    background: "linear-gradient(135deg,#d97706,#f59e0b,#fbbf24)",
+                    color: "#0a0a15",
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    cursor: "pointer",
+                    boxShadow: "0 12px 32px rgba(251,191,36,0.4)"
+                  }}
+                >
+                  ⬇️ Download Report
+                </button>
               </div>
             </div>
           )}

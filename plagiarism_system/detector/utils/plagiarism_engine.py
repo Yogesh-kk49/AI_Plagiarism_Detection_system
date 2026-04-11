@@ -36,6 +36,14 @@ from collections import Counter
 # ════════════════════════════════════════════════════════════════
 #  VERDICT / SIGNAL EMOJI MAPS
 # ════════════════════════════════════════════════════════════════
+def normalize_input(text: str) -> str:
+    text = unicodedata.normalize("NFKC", text)
+    text = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\t", "    ")
+    text = "\n".join(line.rstrip() for line in text.split("\n"))
+    text = re.sub(r'\n{2,}', '\n', text)
+    return text.strip()
 
 VERDICT_EMOJI = {
     "Highly Likely AI-Generated":     "🤖",
@@ -1790,6 +1798,7 @@ def analyze_code_ai_likelihood(code: str) -> dict:
     Fast: no ML models. Single AST parse. Handles up to 5000 lines fully.
     v10.0: 214+ features, unified single-parse AST, optimised sampling.
     """
+    code = normalize_input(code)
     if not code or len(code.strip()) < 10:
         return {
             "label": "Insufficient Code", "emoji": "⚠️", "ai_probability": 0,

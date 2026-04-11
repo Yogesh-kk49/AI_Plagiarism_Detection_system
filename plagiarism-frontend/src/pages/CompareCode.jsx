@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { jsPDF } from "jspdf";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const injectStyles = () => {
@@ -333,6 +334,440 @@ const BatchResult = ({ result }) => {
   );
 };
 
+// ─── PDF Download Function ────────────────────────────────────────────────────
+const generatePDF = (result, resultMode, isPasted = false) => {
+  if (!result) {
+    alert("No result available to export.");
+    return;
+  }
+
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  let y = 20;
+
+  const colors = {
+    text: [31, 41, 55],
+    muted: [107, 114, 128],
+    lightText: [156, 163, 175],
+    border: [229, 231, 235],
+    card: [248, 250, 252],
+    white: [255, 255, 255],
+    primary: [99, 102, 241],
+    primarySoft: [224, 231, 255],
+    success: [22, 163, 74],
+    successSoft: [220, 252, 231],
+    warning: [217, 119, 6],
+    warningSoft: [254, 243, 199],
+    danger: [220, 38, 38],
+    dangerSoft: [254, 226, 226],
+    barBg: [229, 231, 235],
+    headerBg: [15, 23, 42],
+    sectionBg: [241, 245, 249],
+  };
+
+  const formatDate = () => new Date().toLocaleString();
+
+  const getSeverityForPDF = (pct) => {
+    if (pct >= 75) {
+      return { label: "High Plagiarism", color: colors.danger, soft: colors.dangerSoft };
+    }
+    if (pct >= 40) {
+      return { label: "Moderate Similarity", color: colors.warning, soft: colors.warningSoft };
+    }
+    return { label: "Low Similarity", color: colors.success, soft: colors.successSoft };
+  };
+
+  const addPageIfNeeded = (requiredHeight = 20) => {
+    if (y + requiredHeight > pageHeight - 16) {
+      pdf.addPage();
+      y = 18;
+      drawPageHeaderMini();
+    }
+  };
+
+  const drawText = (text, x, yPos, options = {}) => {
+    const {
+      size = 10,
+      color = colors.text,
+      style = "normal",
+      align = "left",
+      maxWidth,
+    } = options;
+
+    pdf.setFont("helvetica", style);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...color);
+
+    const safeText = text == null ? "" : String(text);
+
+    if (maxWidth) {
+      const lines = pdf.splitTextToSize(safeText, maxWidth);
+      pdf.text(lines, x, yPos, { align });
+      return lines.length * (size * 0.42);
+    }
+
+    pdf.text(safeText, x, yPos, { align });
+    return size * 0.42;
+  };
+
+  const drawRoundedBox = (x, yPos, w, h, fillColor, radius = 4) => {
+    pdf.setFillColor(...fillColor);
+    pdf.roundedRect(x, yPos, w, h, radius, radius, "F");
+  };
+
+  const drawStatusChip = (label, x, yPos, color, softColor) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    const textWidth = pdf.getTextWidth(label);
+    const chipWidth = textWidth + 10;
+    const chipHeight = 7;
+
+    pdf.setFillColor(...softColor);
+    pdf.roundedRect(x, yPos, chipWidth, chipHeight, 3, 3, "F");
+    pdf.setTextColor(...color);
+    pdf.text(label, x + chipWidth / 2, yPos + 4.7, { align: "center" });
+  };
+
+  const drawProgressBar = (x, yPos, w, h, pct, fillColor) => {
+    const safePct = Math.max(0, Math.min(Number(pct) || 0, 100));
+
+    pdf.setFillColor(...colors.barBg);
+    pdf.roundedRect(x, yPos, w, h, 2, 2, "F");
+
+    const fillWidth = Math.max((w * safePct) / 100, safePct > 0 ? 2 : 0);
+    pdf.setFillColor(...fillColor);
+    pdf.roundedRect(x, yPos, fillWidth, h, 2, 2, "F");
+  };
+
+  const drawPageHeaderMini = () => {
+    pdf.setDrawColor(...colors.border);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    drawText("Code Plagiarism Report", margin, y, {
+      size: 11,
+      style: "bold",
+      color: colors.text,
+    });
+
+    drawText(`Generated: ${formatDate()}`, pageWidth - margin, y, {
+      size: 8,
+      color: colors.muted,
+      align: "right",
+    });
+
+    y += 8;
+  };
+
+  // Header background
+  pdf.setFillColor(...colors.headerBg);
+  pdf.rect(0, 0, pageWidth, 26, "F");
+  
+  // Main title
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(17);
+  pdf.setTextColor(...colors.white);
+  pdf.text("Code Plagiarism Report", margin, 11);
+  
+  // Subtitle with date
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.setTextColor(180, 210, 220);
+  pdf.text(`Generated: ${formatDate()}`, margin, 19);
+  
+  // Bottom border line
+  pdf.setDrawColor(...colors.border);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, 28, pageWidth - margin, 28);
+
+  y = 38;
+
+  if (resultMode === "single") {
+    // ──── SINGLE RESULT ────
+    const pct = extractPercentage(result);
+    if (pct === null) {
+      drawText("Unable to extract similarity percentage from result.", margin, y, {
+        size: 10,
+        color: colors.muted,
+      });
+      pdf.save("Code_Comparison_Report.pdf");
+      return;
+    }
+
+    const severity = getSeverityForPDF(pct);
+
+    // Source information
+    addPageIfNeeded(16);
+    drawText("Source Information", margin, y, {
+      size: 11,
+      style: "bold",
+      color: colors.text,
+    });
+    y += 6;
+
+    if (isPasted) {
+      drawText("Source 1: Pasted Code", margin + 2, y, {
+        size: 9,
+        color: colors.muted,
+      });
+      y += 5;
+      drawText("Source 2: Pasted Code", margin + 2, y, {
+        size: 9,
+        color: colors.muted,
+      });
+    }
+    y += 8;
+
+    // Overview section
+    addPageIfNeeded(40);
+    drawText("Similarity Overview", margin, y, {
+      size: 12,
+      style: "bold",
+      color: colors.text,
+    });
+    y += 7;
+
+    const cardW = (contentWidth - 10) / 2;
+    const cardH = 24;
+
+    // Similarity card
+    drawRoundedBox(margin, y, cardW, cardH, severity.soft, 4);
+    drawText("Similarity Score", margin + 4, y + 6, {
+      size: 8,
+      color: colors.muted,
+      style: "bold",
+    });
+    drawText(`${pct}%`, margin + 4, y + 16, {
+      size: 16,
+      color: severity.color,
+      style: "bold",
+    });
+
+    // Severity card
+    drawRoundedBox(margin + cardW + 10, y, cardW, cardH, severity.soft, 4);
+    drawText("Assessment", margin + cardW + 10 + 4, y + 6, {
+      size: 8,
+      color: colors.muted,
+      style: "bold",
+    });
+    drawText(severity.label, margin + cardW + 10 + 4, y + 16, {
+      size: 12,
+      color: severity.color,
+      style: "bold",
+      maxWidth: cardW - 8,
+    });
+
+    y += cardH + 12;
+
+    // Details section
+    addPageIfNeeded(50);
+    drawText("Analysis Details", margin, y, {
+      size: 12,
+      style: "bold",
+      color: colors.text,
+    });
+    y += 8;
+
+    const detailBoxHeight = 42;
+    drawRoundedBox(margin, y, contentWidth, detailBoxHeight, colors.card, 5);
+    pdf.setDrawColor(...colors.border);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(margin, y, contentWidth, detailBoxHeight, 5, 5, "S");
+
+    const badgeX = margin + 4 + 10;
+    drawStatusChip(severity.label, badgeX, y + 5, severity.color, severity.soft);
+
+    const descText = pct >= 75
+      ? "High plagiarism detected. These code snippets share substantial code structure and logic. Manual review is strongly recommended. Identical variable names, function signatures, and control flow patterns indicate potential copying."
+      : pct >= 40
+      ? "Moderate similarity found. Some structural or logic overlap detected. Consider reviewing shared patterns and implementation details. Similar algorithms or library usage may explain the overlap."
+      : "Low similarity detected. No significant overlapping code structure found between these snippets. The code appears to be independently written with different approaches and implementations.";
+
+    const descLines = pdf.splitTextToSize(descText, contentWidth - 8);
+    drawText(descLines, margin + 4, y + 18, {
+      size: 8.5,
+      color: colors.muted,
+      maxWidth: contentWidth - 8,
+    });
+
+    y += detailBoxHeight + 10;
+
+    // Progress bar section
+    addPageIfNeeded(20);
+    drawText("Similarity Distribution", margin, y, {
+      size: 11,
+      style: "bold",
+      color: colors.text,
+    });
+    y += 7;
+
+    drawProgressBar(margin, y, contentWidth, 6, pct, severity.color);
+    y += 9;
+
+    drawText("0%", margin, y, {
+      size: 8,
+      color: colors.muted,
+    });
+    drawText("100%", pageWidth - margin, y, {
+      size: 8,
+      color: colors.muted,
+      align: "right",
+    });
+
+  } else {
+    // ──── BATCH RESULT ────
+    const rows = extractBatchResults(result);
+    if (!rows || rows.length === 0) {
+      drawText("No comparison results available.", margin, y, {
+        size: 10,
+        color: colors.muted,
+      });
+      pdf.save("code-plagiarism-report.pdf");
+      return;
+    }
+
+    const sorted = [...rows].sort((a, b) => (extractPercentage(b) ?? 0) - (extractPercentage(a) ?? 0));
+    const highCount = sorted.filter(r => (extractPercentage(r) ?? 0) >= 75).length;
+    const modCount = sorted.filter(r => {
+      const p = extractPercentage(r) ?? 0;
+      return p >= 40 && p < 75;
+    }).length;
+    const lowCount = sorted.filter(r => (extractPercentage(r) ?? 0) < 40).length;
+
+    // Overview
+    addPageIfNeeded(40);
+    drawText("Comparison Overview", margin, y, {
+      size: 12,
+      style: "bold",
+      color: colors.text,
+    });
+    y += 7;
+
+    const gap = 4;
+    const cardW = (contentWidth - gap * 3) / 4;
+    const cardH = 24;
+
+    const summaryCards = [
+      { title: "Total", value: `${rows.length}`, fill: colors.primarySoft, color: colors.primary },
+      { title: "High Risk", value: `${highCount}`, fill: colors.dangerSoft, color: colors.danger },
+      { title: "Moderate", value: `${modCount}`, fill: colors.warningSoft, color: colors.warning },
+      { title: "Low Risk", value: `${lowCount}`, fill: colors.successSoft, color: colors.success },
+    ];
+
+    summaryCards.forEach((card, i) => {
+      const x = margin + i * (cardW + gap);
+      drawRoundedBox(x, y, cardW, cardH, card.fill, 4);
+
+      drawText(card.title, x + 3, y + 6, {
+        size: 7.5,
+        color: colors.muted,
+        style: "bold",
+      });
+
+      drawText(card.value, x + 3, y + 16, {
+        size: 14,
+        color: card.color,
+        style: "bold",
+      });
+    });
+
+    y += cardH + 12;
+
+    // Detailed comparisons
+    addPageIfNeeded(25);
+    drawText("File-by-File Comparisons", margin, y, {
+      size: 12,
+      style: "bold",
+      color: colors.text,
+    });
+
+    y += 8;
+
+    sorted.forEach((row, index) => {
+      const pct = extractPercentage(row);
+      const file1 = row.file1 ?? row.code1 ?? `File ${index * 2 + 1}`;
+      const file2 = row.file2 ?? row.code2 ?? `File ${index * 2 + 2}`;
+      const severity = getSeverityForPDF(pct ?? 0);
+
+      const cardHeight = 38;
+      addPageIfNeeded(cardHeight + 6);
+
+      drawRoundedBox(margin, y, contentWidth, cardHeight, colors.card, 4);
+      pdf.setDrawColor(...colors.border);
+      pdf.setLineWidth(0.3);
+      pdf.roundedRect(margin, y, contentWidth, cardHeight, 4, 4, "S");
+
+      // Left column - File names
+      const leftColWidth = contentWidth * 0.55;
+      const file1Lines = pdf.splitTextToSize(file1, leftColWidth - 6);
+      const file2Lines = pdf.splitTextToSize(file2, leftColWidth - 6);
+
+      drawText("File 1:", margin + 3, y + 5, {
+        size: 8,
+        color: colors.muted,
+        style: "bold",
+      });
+      drawText(file1, margin + 3, y + 10, {
+        size: 8.5,
+        color: colors.text,
+        style: "bold",
+        maxWidth: leftColWidth - 6,
+      });
+
+      drawText("File 2:", margin + 3, y + 19, {
+        size: 8,
+        color: colors.muted,
+        style: "bold",
+      });
+      drawText(file2, margin + 3, y + 24, {
+        size: 8.5,
+        color: colors.text,
+        maxWidth: leftColWidth - 6,
+      });
+
+      // Right column - Score and Badge
+      const rightColX = margin + leftColWidth + 2;
+      if (pct !== null) {
+        drawText(`${pct}%`, rightColX, y + 8, {
+          size: 22,
+          style: "bold",
+          color: severity.color,
+          align: "right",
+        });
+
+        drawStatusChip(severity.label, rightColX - 28, y + 28, severity.color, severity.soft);
+      }
+
+      y += cardHeight + 6;
+    });
+  }
+
+  addPageIfNeeded(16);
+  pdf.setDrawColor(...colors.border);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 7;
+
+  drawText("End of report", margin, y, {
+    size: 9,
+    color: colors.muted,
+    style: "bold",
+  });
+
+  drawText("Generated using automated code plagiarism detection", pageWidth - margin, y, {
+    size: 8.5,
+    color: colors.lightText,
+    align: "right",
+  });
+
+  pdf.save("code-plagiarism-report.pdf");
+};
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CompareCode() {
   const navigate = useNavigate();
@@ -550,6 +985,30 @@ export default function CompareCode() {
                 {resultMode==="batch"?"Batch Comparison Results":"Pairwise Comparison Result"}
               </p>
               {resultMode==="single"?<SingleResult result={result}/>:<BatchResult result={result}/>}
+              <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
+                <button
+                  onClick={() => generatePDF(result, resultMode, tab === "paste")}
+                  style={{
+                    padding: "14px 28px",
+                    borderRadius: "14px",
+                    border: "1px solid rgba(99,102,241,0.4)",
+                    background: "linear-gradient(135deg,#6366f1,#7c3aed)",
+                    color: "#fff",
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    cursor: "pointer",
+                    boxShadow: "0 12px 32px rgba(99,102,241,0.4)",
+                    transition: "all 0.3s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8
+                  }}
+                >
+                  ⬇️ Download Report
+                </button>
+              </div>
             </div>
           )}
         </div>

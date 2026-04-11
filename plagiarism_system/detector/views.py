@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.utils import timezone
-
+from django.core.mail import EmailMessage
 # Google OAuth
 from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
@@ -219,6 +219,7 @@ def compare_documents(request, doc1_id, doc2_id):
     except Exception as e:
         # This will show real backend error instead of generic 500
         return Response({"error": str(e)}, status=500)
+    
 @api_view(['GET'])
 def compare_with_all(request, doc_id):
     try:
@@ -357,14 +358,17 @@ def ai_check(request, doc_id=None):
     # ================= AI DETECTION =================
     result = ai_likelihood_score(text)
     user_email = request.session.get("user_email")
+
     if user_email and not result.get('error'):
         ai_score = result.get("ai_percentage", 0)
         risk = "High AI" if ai_score > 70 else "Medium AI" if ai_score > 40 else "Human-like"
 
+        title = doc.file.name if source == "document" else "Pasted Content"
+
         UserHistory.objects.create(
             user_email=user_email,
             result_type="essay_ai",
-            title="AI Essay Detection",
+            title=title,
             score=ai_score,
             risk_level=risk
         )
@@ -655,10 +659,11 @@ def code_plagiarism(request):
     user_email = request.session.get("user_email")
     if user_email:
         risk = "High" if similarity > 75 else "Medium" if similarity > 40 else "Low"
+
         UserHistory.objects.create(
             user_email=user_email,
             result_type="code",
-            title="Code vs Code Comparison",
+            title="Pasted Code vs Pasted Code",
             score=similarity,
             risk_level=risk
         )
@@ -677,57 +682,59 @@ def code_plagiarism(request):
         },
         "message": "Code comparison successful"
     }, status=200)
-
-
-@api_view(['GET'])
-def my_history(request):
-    user_email = request.session.get("user_email")
-
-    if not user_email:
-        return Response({"error": "Not authenticated"}, status=403)
-
-    history = UserHistory.objects.filter(
-        user_email=user_email
-    ).order_by('-created_at')
-
-    data = []
-    for h in history:
-        data.append({
-            "type": h.result_type,
-            "title": h.title,
-            "score": h.score,
-            "risk_level": h.risk_level,
-            "created_at": h.created_at
-        })
-
-    return Response({
-        "user": user_email,
-        "total_records": history.count(),
-        "history": data
-    })
     
 @api_view(['POST'])
 def submit_feedback(request):
-    name     = request.data.get("name", "").strip()
-    email    = request.data.get("email", "").strip()
+    # 🔒 Require login
+    user_email = request.session.get("user_email")
+    user_name  = request.session.get("user_name", "User")
+
+    if not user_email:
+        return Response(
+            {"error": "Login required to submit feedback"},
+            status=403
+        )
+
+    # 📥 Get data from frontend
     category = request.data.get("category", "other").strip()
     message  = request.data.get("message", "").strip()
 
-    if not name or not email or not message:
-        return Response({"error": "Name, email, and message are required."}, status=400)
+    if not message:
+        return Response(
+            {"error": "Message is required."},
+            status=400
+        )
 
     # ✅ Save to DB
     FeedbackSubmission.objects.create(
-        name=name, email=email, category=category, message=message
+        name=user_name,
+        email=user_email,
+        category=category,
+        message=message
     )
 
-    # ✅ Email notify you
-    send_mail(
-        subject=f"[Feedback] {category.upper()} from {name}",
-        message=f"Name: {name}\nEmail: {email}\nCategory: {category}\n\nMessage:\n{message}",
-        from_email="ai.plagiarism49@gmail.com",
-        recipient_list=["ai.plagiarism49@gmail.com"],  # your inbox
-        fail_silently=False,
-    )
+    # ✅ Send email (FIXED)
+    try:
+        email = EmailMessage(
+            subject=f"[Feedback] {category.upper()} from {user_name}",
+            body=(
+                f"Name: {user_name}\n"
+                f"Email: {user_email}\n"
+                f"Category: {category}\n\n"
+                f"Message:\n{message}"
+            ),
+            from_email="ai.plagiarism49@gmail.com",
+            to=["ai.plagiarism49@gmail.com"],
+            reply_to=[user_email],   # ✅ Now works
+        )
 
-    return Response({"message": "Feedback submitted successfully."}, status=200)
+        email.send()
+
+    except Exception as e:
+        # ⚠️ Don't crash API if email fails
+        print("EMAIL ERROR:", str(e))
+
+    return Response(
+        {"message": "Feedback submitted successfully."},
+        status=200
+    )

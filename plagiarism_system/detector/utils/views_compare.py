@@ -8,7 +8,7 @@ import ast
 from detector.models import PlagiarismHistory, UserHistory
 # ── Import the v6.1 AI detector engine ───────────────────────────────────────
 # plagiarism_engine.py is ai_code_detector_v6.py placed inside detector/utils/
-from .plagiarism_engine import analyze_code_ai_likelihood
+from .plagiarism_engine import analyze_code_ai_likelihood, normalize_input
 
 # ── Optional file parsers ─────────────────────────────────────────────────────
 try:
@@ -466,8 +466,8 @@ def code_analyze(request):
         try:
             UserHistory.objects.create(
                 user_email=user_email,
-                result_type="code_analyze",
-                title=f"Code Analysis ({LANG_DISPLAY.get(language, language)})",
+                result_type="code",
+                title=uploaded.name if "file" in request.FILES else "Pasted Code",
                 score=result.get("ai_probability", 0),
                 risk_level=result.get("label", "Unknown"),
             )
@@ -573,8 +573,28 @@ def compare_code(request):
             status=400
         )
 
+    code1 = normalize_input(code1)
+    code2 = normalize_input(code2)
+
     clean1 = preprocess_code(code1)
     clean2 = preprocess_code(code2)
+    if clean1 == clean2:
+        return Response({
+            "mode": "paste_vs_paste",
+            "detected_language_1": detect_language(code1),
+            "detected_language_2": detect_language(code2),
+            "language_match": True,
+            "metrics": {
+                "text_similarity": 100,
+                "line_similarity": 100,
+                "token_similarity": 100,
+                "lcs_similarity": 100,
+                "ast_similarity": 100
+            },
+            "final_score": 100.0,
+            "risk_level": "VERY HIGH",
+            "risk_emoji": "🔴",
+        })
     lang1  = detect_language(code1)
     lang2  = detect_language(code2)
 
@@ -595,8 +615,8 @@ def compare_code(request):
         try:
             UserHistory.objects.create(
                 user_email=user_email,
-                result_type="code_compare",
-                title="Paste vs Paste Comparison",
+                result_type="code",
+                title="Pasted Code vs Pasted Code",
                 score=final,
                 risk_level=risk,
             )
@@ -727,7 +747,7 @@ def compare_batch(request):
             if user_email:
                 UserHistory.objects.create(
                     user_email=user_email,
-                    result_type="code_batch",
+                    result_type="code",
                     title=f"{f1['name']} vs {f2['name']}",
                     score=final,
                     risk_level=risk
