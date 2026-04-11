@@ -29,6 +29,7 @@ It combines **heuristic-based analysis** with structured evaluation techniques t
 * 🔐 OTP-based user authentication system
 * 👤 Secure user login & verification
 * 📁 File storage and management system
+* 📄 Professional downloadable PDF analysis reports
 * 🌐 Web-based interface for easy usage
 
 ---
