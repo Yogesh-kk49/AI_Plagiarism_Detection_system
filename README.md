@@ -48,7 +48,8 @@ It combines **heuristic-based analysis** with structured evaluation techniques t
 ### **Data Processing**
 
 * Natural Language Processing (NLP)
-* Heuristic-based text analysis
+* Heuristic AI authorship analysis
+* Similarity / plagiarism scoring algorithms
 
 ### **Security**
 
