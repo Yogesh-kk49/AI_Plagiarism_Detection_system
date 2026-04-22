@@ -161,7 +161,6 @@ http://127.0.0.1:8000/
 * Deep learning-based detection models
 * Large-scale dataset training
 * Multi-language & code detection
-* REST API integration
 * Advanced dashboard with analytics
 * LMS integration (Moodle, etc.)
 
