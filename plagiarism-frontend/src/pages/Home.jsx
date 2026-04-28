@@ -522,7 +522,6 @@ export default function Home() {
           )}
         </div>
       </div>
-      {/* No YK Watermark */}
     </div>
   );
 }

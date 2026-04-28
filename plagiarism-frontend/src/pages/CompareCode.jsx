@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { jsPDF } from "jspdf";
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const injectStyles = () => {
   if (document.getElementById("compare-styles")) return;
   const tag = document.createElement("style");

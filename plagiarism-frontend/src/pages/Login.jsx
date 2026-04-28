@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 
-/* ─── Keyframes injected once ─── */
 const injectStyles = () => {
   if (document.getElementById("login-anim-styles")) return;
   const tag = document.createElement("style");
@@ -172,7 +171,6 @@ const Avatar = ({ name, picture }) => {
   );
 };
 
-/* ─── Ambient Orbs ─── */
 const Orbs = () => (
   <>
     <div style={{

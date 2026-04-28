@@ -23,7 +23,7 @@ from .views import (
     submit_feedback
 )
 
-# Code plagiarism APIs
+
 from .utils.views_compare import compare_code, compare_batch
 
 # History APIs
@@ -46,7 +46,7 @@ urlpatterns = [
     path('api/google-login/', google_login, name='google_login'),
     path('api/check-auth/', check_auth),
     path('api/logout/', logout),
-    path('api/code-plagiarism/', code_plagiarism),  # ✅ ADDED — was missing
+    path('api/code-plagiarism/', code_plagiarism), 
     path('api/code-analyze/', code_analyze),
     path('api/compare-code/', compare_code),
     path('api/compare-batch/', compare_batch),

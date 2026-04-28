@@ -727,8 +727,6 @@ def _extract_features(code: str, lines: list) -> dict:
     else:
         pattern_repetition_index = 0.0
 
-    # ── NEW: STRUCTURAL VARIATION INDEX (Feature Group 10 of set 2) ──
-    # Measure structure entropy per-function segment (how much each function differs)
     struct_variation_score = structure_pattern_entropy  # reuse
     structure_entropy      = structure_pattern_entropy
 
@@ -900,15 +898,6 @@ def _extract_features(code: str, lines: list) -> dict:
                         symmetric_branches += 1
                         break
     branch_symmetry_score = round(symmetric_branches / max(if_count, 1), 4)
-
-    # ════════════════════════════════════════════════════════════════
-    #  v9.0 NEW FEATURE BLOCKS  (5 AST-powered features)
-    # ════════════════════════════════════════════════════════════════
-
-    # ── v9 Feature 2: Identifier Root Entropy ────────────────────
-    # Entropy over the first component of snake_case identifiers.
-    # Low entropy → many identifiers share the same semantic root (AI clustering).
-    # e.g. user_data / user_input / user_result → root "user" dominates
     _roots = [v.split("_")[0] for v in vars_ if "_" in v]
     identifier_root_entropy = round(_entropy(_roots), 4) if _roots else 0.0
     # Also count how concentrated the top root is
@@ -916,11 +905,7 @@ def _extract_features(code: str, lines: list) -> dict:
         _root_ctr = Counter(_roots)
         _top_root_ratio = round(_root_ctr.most_common(1)[0][1] / len(_roots), 4)
     else:
-        _top_root_ratio = 0.0
-
-    # ── v9 Feature 4: Identifier Reuse Distance ──────────────────
-    # Single pass over all tokens; compute average gap between reuses.
-    # Short average distance → AI reuses the same variable names tightly together.
+        _top_root_ratio = 0.0   
     _last_seen: dict = {}
     _id_distances: list = []
     for _i, _t in enumerate(all_tok2):  # all_tok2 already computed above
@@ -933,9 +918,6 @@ def _extract_features(code: str, lines: list) -> dict:
     # ════════════════════════════════════════════════════════════════
     #  v8.0 NEW FEATURE BLOCKS
     # ════════════════════════════════════════════════════════════════
-
-    # ── v8 Feature 1: Operator Usage Distribution ────────────────
-    # Fine-grained operator frequency entropy + explicit vs augmented assignment
     all_ops = re.findall(r'[+\-*/=<>!&|^%]{1,2}', code)
     op_freq_entropy = round(_entropy(all_ops), 4) if all_ops else 0.0
     # Explicit: result = result + value  vs  augmented: result += value
@@ -945,8 +927,6 @@ def _extract_features(code: str, lines: list) -> dict:
     explicit_assignment_ratio  = round(explicit_assignments  / total_assign, 4)
     augmented_assignment_ratio = round(augmented_assignments / total_assign, 4)
 
-    # ── v8 Feature 2: Conditional Depth Pattern ──────────────────
-    # Track nesting depth of consecutive if-statements line-by-line
     if_depths = []
     cur_if_depth = 0
     prev_indent  = 0
@@ -965,8 +945,6 @@ def _extract_features(code: str, lines: list) -> dict:
     max_if_depth     = max(if_depths, default=0)
     if_depth_variance = round(statistics.pstdev(if_depths) ** 2, 4) if len(if_depths) > 1 else 0.0
 
-    # ── v8 Feature 3: Control Flow Shape Fingerprint (per function) ──
-    # Build shape string per function body and measure diversity across functions
     func_shape_strings = []
     for idx, start in enumerate(func_starts):
         end = func_starts[idx + 1] if idx + 1 < len(func_starts) else len(lines)
@@ -994,15 +972,12 @@ def _extract_features(code: str, lines: list) -> dict:
     lit_counts = [num_literals, string_literal_count, bool_literal_count, none_literal_count]
     literal_type_entropy = round(_entropy(lit_counts), 4) if any(lit_counts) else 0.0
 
-    # ── v8 Feature 5: Redundant Boolean Returns ──────────────────
     redundant_bool_return_count = len(re.findall(
         r'if\s+[^:\n]+:\s*\n\s+return\s+True\s*\n\s*else\s*:\s*\n\s+return\s+False', code))
     # Also catch the inverse
     redundant_bool_return_count += len(re.findall(
         r'if\s+[^:\n]+:\s*\n\s+return\s+False\s*\n\s*else\s*:\s*\n\s+return\s+True', code))
 
-    # ── v8 Feature 7: Loop Body Complexity ───────────────────────
-    # Measure std of loop body lengths (line-by-line scan)
     loop_body_lengths = []
     for i, line in enumerate(lines):
         s = line.strip()
@@ -1021,9 +996,6 @@ def _extract_features(code: str, lines: list) -> dict:
                 loop_body_lengths.append(body_len)
     loop_body_length_std = round(
         statistics.pstdev(loop_body_lengths), 4) if len(loop_body_lengths) > 1 else 0.0
-
-    # ── v8 Feature 8: Boolean Expression Complexity ──────────────
-    # Count comparison operators as density signal
     comparison_ops   = len(re.findall(r'[<>]=?|[!=]=', code))
     comparison_density = round(comparison_ops / max(n_lines, 1), 4)
 
@@ -1048,8 +1020,6 @@ def _extract_features(code: str, lines: list) -> dict:
     else:
         token_bigram_rep_score = 0.0
 
-    # ── v8 Feature 13: Comment Density Gradient ──────────────────
-    # Split file into 4 regions, compute comment density per region, then variance
     region_size = max(len(lines) // 4, 1)
     region_densities = []
     for r in range(4):
@@ -1066,10 +1036,6 @@ def _extract_features(code: str, lines: list) -> dict:
     kw_list = ['if', 'for', 'while', 'return', 'try', 'def', 'class', 'import', 'else', 'elif']
     kw_counts = [len(re.findall(r'\b' + k + r'\b', code)) for k in kw_list]
     keyword_distribution_entropy = round(_entropy(kw_counts), 4) if any(kw_counts) else 0.0
-
-    # ── v8 Feature A: Code Stylometry Fingerprint ────────────────
-    # Create a style vector and measure its statistical spread
-    # Very low variance = smooth/consistent = AI
     style_vector = [
         round(avg_vlen / 10.0, 4),                        # normalise to ~0-1
         round(indent_std / 10.0, 4),
@@ -1080,17 +1046,12 @@ def _extract_features(code: str, lines: list) -> dict:
     ]
     style_vector_variance = round(statistics.pstdev(style_vector) ** 2, 4)
 
-    # ── v8 Feature B: Function Signature Diversity ───────────────
-    # Entropy over parameter counts across functions (low = AI)
+
     func_sig_param_entropy = round(_entropy(param_counts), 4) if param_counts else 0.0
 
-    # ── v8 Feature C: Cross-Function Structural Similarity ───────
-    # Same as func_shape_entropy but focused on first 4 tokens of shape
     short_shapes = [s[:4] for s in func_shape_strings if s]
     cross_func_shape_entropy = round(_entropy(short_shapes), 4) if short_shapes else 0.0
 
-    # ── v8 Feature D: Function Length Skewness ───────────────────
-    # Low skewness = uniform function lengths = AI
     if len(func_lengths) >= 3:
         try:
             function_length_skewness = round(abs(statistics.mean(func_lengths) -
@@ -1101,8 +1062,6 @@ def _extract_features(code: str, lines: list) -> dict:
     else:
         function_length_skewness = 0.0
 
-    # ── v8 Feature E: AI Hallucination Signals ───────────────────
-    # Detect redundant None checks (if x is None: return None / if not x: return None)
     redundant_none_checks = len(re.findall(
         r'if\s+\w+\s+is\s+None\s*:\s*\n\s+return\s+None', code))
     redundant_none_checks += len(re.findall(
@@ -1113,9 +1072,6 @@ def _extract_features(code: str, lines: list) -> dict:
     print_in_except += len(re.findall(
         r'except\s+\w[^:]*:\s*\n\s+(?:logging|logger)\.\w+\s*\(', code))
     hallucination_signal_count = redundant_none_checks + print_in_except
-
-    # ── v8 Feature F: Semantic Token Density ─────────────────────
-    # How densely packed are AI-typical semantic tokens?
     semantic_tokens = re.findall(
         r'\b(validate|process|calculate|result|output|input|data|config|handler|'
         r'manager|controller|service|repository|factory|builder|generator|'
@@ -1123,7 +1079,6 @@ def _extract_features(code: str, lines: list) -> dict:
     semantic_token_density = round(len(semantic_tokens) / max(n_lines, 1), 4)
 
     return {
-        # ── Original features ─────────────────────────────────────
         "comment_density": comment_density, "verbose_comment_count": verbose_comments,
         "obvious_comment_count": obvious_comments, "section_banner_count": section_banners,
         "docstring_count": docstrings, "full_line_comment_ratio": full_ratio,
@@ -1465,9 +1420,9 @@ def _compute_ai_score(f: dict) -> float:
     if 0.12 < f["blank_line_ratio"] < 0.30: score += 6
     if f["double_blank_gaps"] >= 2:      score += 4
     # NEW: complexity profile
-    if f["complexity_variance"] < 2.0: score += 4   # very uniform complexity = AI
+    if f["complexity_variance"] < 2.0: score += 4   
     elif f["complexity_variance"] > 10.0: score -= 4
-    if 2.0 < f["avg_function_complexity"] < 6.0: score += 4  # moderate AI range
+    if 2.0 < f["avg_function_complexity"] < 6.0: score += 4  
 
     # ── BOILERPLATE / AI PATTERNS ────────────────────────────────
     bp = f["boilerplate_keyword_hits"]
@@ -1532,11 +1487,10 @@ def _compute_ai_score(f: dict) -> float:
     if f["rename_chain_count"]         >= 2:   score -= 6
     if f["debug_statement_density"]    > 0.05: score -= 6
     if f["temporary_variable_ratio"]   > 0.05: score -= 5
-    # NEW: literal values (humans use irregular numbers)
-    if f["round_number_ratio"] > 0.7: score += 4  # AI uses round numbers
+    if f["round_number_ratio"] > 0.7: score += 4  
     elif f["round_number_ratio"] < 0.3: score -= 4
 
-    # ── INFORMATION THEORY ────────────────────────────────────────
+    # ── INFORMATION THEORY ──────
     ent = f["entropy_score"]
     if ent < 3.7:    score += 10
     elif ent < 4.0:  score += 5
@@ -1553,16 +1507,16 @@ def _compute_ai_score(f: dict) -> float:
     elif ld < 0.55:  score -= 5
     if f["quote_consistency"] > 0.95: score += 4
     # NEW: extended entropy metrics
-    if f["token_entropy"]      < 3.5: score += 5  # low token entropy = repetitive = AI
+    if f["token_entropy"]      < 3.5: score += 5  
     if f["identifier_entropy"] < 3.0: score += 5
-    if f["operator_entropy"]   < 1.5: score += 4  # uniform operator use = AI
+    if f["operator_entropy"]   < 1.5: score += 4  
     # NEW: token repetition
     if f["duplicate_line_ratio"] > 0.08: score += 6
     elif f["duplicate_line_ratio"] > 0.04: score += 3
     if f["repeated_code_blocks"] >= 3: score += 5
     # NEW: structural fingerprint
     se2 = f["structure_pattern_entropy"]
-    if se2 < 1.0:   score += 6   # very uniform structure = AI
+    if se2 < 1.0:   score += 6   
     elif se2 < 1.5: score += 3
     elif se2 > 2.5: score -= 5
     if f["pattern_repetition_index"] > 0.15: score += 6
@@ -1580,7 +1534,7 @@ def _compute_ai_score(f: dict) -> float:
         # NEW: AST structural features
         if f["ast_tree_depth"] > 8:              score += 5
         if f["avg_children_per_node"] > 3.0:     score += 4
-        if f["ast_node_type_entropy"] < 2.0:     score += 5   # low = repetitive structure
+        if f["ast_node_type_entropy"] < 2.0:     score += 5   
         if f["ast_branching_factor"]  > 3.0:     score += 4
         # High return count relative to functions = AI's explicit return style
         if f["ast_return_count"] > f["ast_function_count"] * 1.5: score += 4
@@ -1592,7 +1546,6 @@ def _compute_ai_score(f: dict) -> float:
     elif ai_l >= 1:  score += 5
     if hu_l >= 3:    score -= 6
     elif hu_l >= 1:  score -= 2
-    # NEW: loop style entropy (low = AI uses one preferred loop style)
     if f["loop_style_entropy"] < 0.5:  score += 5
     elif f["loop_style_entropy"] > 1.5: score -= 4
     if f["range_len_loop_count"] >= 2: score += 4
@@ -1788,10 +1741,6 @@ def _score_bar(score: float, width: int = 30) -> str:
     return f"[{char * filled}{'·' * (width - filled)}] {score:.0f}%"
 
 
-# ════════════════════════════════════════════════════════════════
-#  PUBLIC API
-# ════════════════════════════════════════════════════════════════
-
 def analyze_code_ai_likelihood(code: str) -> dict:
     """
     Analyze code for AI vs Human likelihood.
@@ -1821,10 +1770,6 @@ def analyze_code_ai_likelihood(code: str) -> dict:
             "feature_breakdown": {}, "raw_features": {},
         }
 
-    # ── Sampling strategy ─────────────────────────────────────────
-    # ≤ 5000 lines : full analysis — NO sampling, NO truncation
-    # > 5000 lines : stratified 8-zone sample (~200 lines/zone ≈ 1600 lines)
-    #                zones are evenly spaced across the full file
     FULL_LIMIT = 5000
     ZONE_SIZE  = 200
     N_ZONES    = 8
@@ -1836,7 +1781,6 @@ def analyze_code_ai_likelihood(code: str) -> dict:
     if original_line_count > FULL_LIMIT:
         sampled = True
         n = original_line_count
-        # Compute N_ZONES evenly-spaced start positions across the FULL file
         zone_starts = [
             int(i * (n - ZONE_SIZE) / max(N_ZONES - 1, 1))
             for i in range(N_ZONES)
@@ -2051,10 +1995,6 @@ def analyze_code_ai_likelihood(code: str) -> dict:
     }
 
 
-# ════════════════════════════════════════════════════════════════
-#  FAST PLAGIARISM COMPARISON (unchanged from v6.2)
-# ════════════════════════════════════════════════════════════════
-
 def _strip_comments(code: str) -> str:
     code = re.sub(r"#.*",       "", code)
     code = re.sub(r"//.*",      "", code)
@@ -2148,10 +2088,6 @@ def compare_documents_content(content1: str, content2: str) -> dict:
     }
 
 
-# ════════════════════════════════════════════════════════════════
-#  SINGLETON
-# ════════════════════════════════════════════════════════════════
-
 import threading as _threading
 
 _detector      = None
@@ -2177,10 +2113,6 @@ def ai_likelihood_score(text: str) -> dict:
     """Entry point for views.py ai_check endpoint."""
     return analyze_code_ai_likelihood(text)
 
-
-# ════════════════════════════════════════════════════════════════
-#  PRETTY PRINT
-# ════════════════════════════════════════════════════════════════
 
 def print_report(result: dict) -> None:
     SEP = "═" * 65

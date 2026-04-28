@@ -3,9 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { jsPDF } from "jspdf";
 
-/* ─────────────────────────────────────────────────────────────────
-   BACKGROUND FIX
-───────────────────────────────────────────────────────────────── */
 const forceBg = () => {
   document.documentElement.style.background = "#0a0a15";
   document.body.style.background = "#0a0a15";
@@ -19,9 +16,7 @@ const forceBg = () => {
   }
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   STYLES
-───────────────────────────────────────────────────────────────── */
+
 const injectStyles = () => {
   if (document.getElementById("sim-styles")) return;
   const tag = document.createElement("style");
@@ -75,11 +70,7 @@ const injectStyles = () => {
   document.head.appendChild(tag);
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   CLIENT-SIDE CODE DETECTION
-   Mirrors the backend is_code() logic so we can reject code files
-   BEFORE uploading — preventing orphan DB records.
-───────────────────────────────────────────────────────────────── */
+
 const isLikelyCode = (text) => {
   if (!text || text.trim().length < 30) return false;
 
@@ -116,9 +107,7 @@ const isLikelyCode = (text) => {
   return matched >= 2 && (matched / lines.length) >= 0.20;
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   SEVERITY COLOURS
-───────────────────────────────────────────────────────────────── */
+
 const getSeverity = (pct) => {
   const n = typeof pct === "number" && !isNaN(pct) ? pct : 0;
   if (n >= 70) return {
@@ -143,9 +132,7 @@ const getSeverity = (pct) => {
 
 const calcPairs = (n) => Math.floor(n * (n - 1) / 2);
 
-/* ─────────────────────────────────────────────────────────────────
-   SMALL COMPONENTS
-───────────────────────────────────────────────────────────────── */
+
 const Orbs = () => (
   <>
     <div style={{ position:"fixed", top:"8%", left:"1%", width:560, height:560, borderRadius:"50%", background:"radial-gradient(circle at 30% 30%, rgba(251,191,36,0.14) 0%, rgba(251,191,36,0.04) 35%, transparent 70%)", animation:"orbFloat1 18s ease-in-out infinite", pointerEvents:"none", zIndex:0 }} />
@@ -248,9 +235,7 @@ const SimBtn = ({ children, onClick, disabled, cls, bg, color, shadow, style = {
   </button>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   MAIN COMPONENT
-───────────────────────────────────────────────────────────────── */
+
 export default function Similarity() {
   const navigate = useNavigate();
 
@@ -322,14 +307,7 @@ export default function Similarity() {
   const toggleDoc     = (id) => setSelectedDocs(p => ({ ...p, [id]: !p[id] }));
   const selectedCount = ()   => Object.values(selectedDocs).filter(Boolean).length;
 
-  /* ─────────────────────────────────────────────────────────────────
-     FIX 1: CLIENT-SIDE CODE DETECTION BEFORE UPLOAD
-     Reads each file as text and checks isLikelyCode().
-     If any file looks like code → block the upload entirely with
-     an amber CodeWarningBanner, no DB records created.
-     NOTE: For PDF/DOCX we can't read raw text client-side, so we
-     only check .txt files here; the backend catches the rest.
-  ───────────────────────────────────────────────────────────────── */
+ 
   const uploadFiles = async () => {
     if (files.length < 2) return setError("Please select at least 2 documents for similarity analysis.");
     setLoading(true); setError(null); setIsCodeError(false); setResults([]);
@@ -346,7 +324,7 @@ export default function Similarity() {
             return;
           }
         } catch {
-          // If we can't read it, let the backend decide
+          
         }
       }
     }
@@ -382,14 +360,7 @@ export default function Similarity() {
     }
   };
 
-  /* ─────────────────────────────────────────────────────────────────
-     FIX 2: NON-BLOCKING PAIR COMPARISONS
-     Instead of throw-on-first-error, we now:
-       - Run all pairs with Promise.allSettled (parallel, non-blocking)
-       - Successful pairs → type:"result" entries in results[]
-       - Failed pairs     → type:"skipped" entries with the reason
-     This means if 1 of 10 pairs fails, the other 9 still show.
-  ───────────────────────────────────────────────────────────────── */
+ 
   const runComparisons = async (pairs) => {
     setLoading(true); setError(null); setIsCodeError(false);
 
@@ -417,9 +388,7 @@ export default function Similarity() {
           severity:              data.severity || null,
         });
       } else {
-        // Extract the pair info from the rejection reason
-        // Promise.allSettled gives us the error; we tagged d1/d2 via the closure
-        // We need to recover the pair — re-parse from the error context
+       
         const err    = outcome.reason;
         const data   = err?.response?.data;
         const status = err?.response?.status;
@@ -429,11 +398,11 @@ export default function Similarity() {
                        (data?.error || "").toLowerCase().includes("source code");
         if (isCode) anyCodeError = true;
 
-        // Recover doc names: the API url is in err.config.url → /compare/id1/id2/
+        
         let name1 = "Document", name2 = "Document";
         try {
           const parts = err?.config?.url?.split("/").filter(Boolean);
-          // parts: ["compare", "id1", "id2"]
+          
           if (parts && parts.length >= 3) {
             const id1 = parseInt(parts[parts.length - 2]);
             const id2 = parseInt(parts[parts.length - 1]);
@@ -654,9 +623,6 @@ const generatePDF = () => {
   const lowCount = normalResults.filter(
     (r) => (Number(r?.similarity_percentage) || 0) < 40
   ).length;
-
-  // UPDATED HEADER - matching AI detection report style
-  // Header background
   pdf.setFillColor(...colors.headerBg);
   pdf.rect(0, 0, pageWidth, 26, "F");
   
@@ -883,9 +849,7 @@ const generatePDF = () => {
   const skippedResults = results.filter(r => r.type === "skipped");
   const hasResults     = results.length > 0;
 
-  /* ─────────────────────────────────────────────────────────────────
-     RENDER
-  ───────────────────────────────────────────────────────────────── */
+
   return (
     <div style={{ height:"100vh", background:"linear-gradient(135deg,#0a0a15 0%,#0f0f1a 50%,#1a1a2e 100%)", fontFamily:"Inter,sans-serif", position:"relative", overflow:"hidden", display:"flex", flexDirection:"column" }}>
       <Orbs />
@@ -896,7 +860,6 @@ const generatePDF = () => {
           : <GuestCorner onLogin={() => navigate("/login")} />
       )}
 
-      {/* ══════════════ TOP BAR ══════════════ */}
       {/* paddingRight:100 reserves space for the fixed profile avatar (52px + 28px margin + buffer) */}
       <div style={{ display:"flex", alignItems:"center", gap:20, padding:"20px 48px", paddingRight:100, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0, position:"relative", zIndex:10, animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both", backdropFilter:"blur(12px)" }}>
         <button className="sim-back" onClick={() => navigate(-1)} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:999, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.4)", color:"#f87171", fontWeight:600, cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.9rem", transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}>← Back</button>
@@ -924,7 +887,7 @@ const generatePDF = () => {
         )}
       </div>
 
-      {/* ══════════════ SPLIT BODY ══════════════ */}
+      
       <div style={{ flex:1, overflow:"hidden", display:"flex", position:"relative", zIndex:5 }}>
 
         {/* ════ LEFT PANEL — Inputs ════ */}

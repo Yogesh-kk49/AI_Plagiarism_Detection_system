@@ -4,7 +4,7 @@ import Upload from "./pages/Upload.jsx";
 import Compare from "./pages/Compare.jsx";
 import AIAnalysis from "./pages/AIAnalysis.jsx";
 import TextPaste from "./pages/TextPaste.jsx";
-import Similarity from "./pages/Similarity.jsx"; // <- keep .jsx
+import Similarity from "./pages/Similarity.jsx"; 
 import Login from "./pages/Login.jsx";
 import Options from "./pages/Options.jsx";
 import CompareCode from "./pages/CompareCode";
@@ -15,7 +15,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/options" element={<Options />} /> {/* NEW PAGE */}
+        <Route path="/options" element={<Options />} /> 
         <Route path="/upload" element={<Upload />} />
         <Route path="/compare" element={<Compare />} />
         <Route path="/ai-analysis" element={<AIAnalysis />} />

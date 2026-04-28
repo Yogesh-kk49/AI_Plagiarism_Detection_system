@@ -17,7 +17,6 @@ def extract_text(file_path):
 
     elif ext == '.pdf':
 
-        # Only enable timeout on Linux/Mac
         if sys.platform != "win32":
             signal.signal(signal.SIGALRM, _timeout_handler)
             signal.alarm(15)

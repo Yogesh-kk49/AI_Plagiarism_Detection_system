@@ -6,8 +6,6 @@ import re
 import io
 import ast
 from detector.models import PlagiarismHistory, UserHistory
-# ── Import the v6.1 AI detector engine ───────────────────────────────────────
-# plagiarism_engine.py is ai_code_detector_v6.py placed inside detector/utils/
 from .plagiarism_engine import analyze_code_ai_likelihood, normalize_input
 
 # ── Optional file parsers ─────────────────────────────────────────────────────
@@ -24,12 +22,8 @@ except ImportError:
     _DOCX_OK = False
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 AST SIMILARITY  (Python-only structural comparison)
-# ════════════════════════════════════════════════════════════════
 
-# Max lines fed into ast_similarity — AST dump SequenceMatcher is O(n²)
-# 300 lines → ~70ms, 600 lines → ~260ms. Cap at 300 lines to stay fast.
+
 _AST_SIM_MAX_LINES = 300
 
 def ast_similarity(code1: str, code2: str) -> float:
@@ -54,9 +48,6 @@ def ast_similarity(code1: str, code2: str) -> float:
         return 0.0
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 NON-CODE DETECTION  (blocks prose/essays/paragraphs)
-# ════════════════════════════════════════════════════════════════
 
 CODE_INDICATORS = [
     r'\bdef \w+\s*\(',
@@ -146,9 +137,7 @@ def is_code(text: str) -> tuple:
     return False, "Content appears to be natural language text"
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 PREPROCESSING
-# ════════════════════════════════════════════════════════════════
+
 
 def preprocess_code(code: str) -> str:
     if not code:
@@ -161,9 +150,7 @@ def preprocess_code(code: str) -> str:
     return code.lower()
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 LANGUAGE DETECTION
-# ════════════════════════════════════════════════════════════════
+
 
 def detect_language(code: str) -> str:
     c = code.lower()
@@ -182,9 +169,7 @@ def detect_language(code: str) -> str:
     return "unknown"
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 SIMILARITY METRICS
-# ════════════════════════════════════════════════════════════════
+
 
 def text_similarity(code1: str, code2: str) -> float:
     matcher = difflib.SequenceMatcher(None, code1, code2)
@@ -215,9 +200,6 @@ def lcs_similarity(code1: str, code2: str) -> float:
     return round((match / max_len) * 100, 2)
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 FINAL WEIGHTED SCORE ENGINE
-# ════════════════════════════════════════════════════════════════
 
 def final_plagiarism_score(text: float, line: float, token: float, lcs: float, ast_score: float) -> float:
     return round(
@@ -240,9 +222,7 @@ def risk_emoji(level: str) -> str:
     return {"VERY HIGH": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢"}.get(level, "⚪")
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 CODE ANALYZE HELPERS  (used only by code_analyze view)
-# ════════════════════════════════════════════════════════════════
+
 
 ALLOWED_LANGUAGES = {"python", "javascript", "java", "cpp", "c", "html", "other"}
 
@@ -256,8 +236,6 @@ LANG_DISPLAY = {
     "other":      "Other",
 }
 
-# Max characters allowed for pasted code input (prevents SequenceMatcher hangs)
-# 200 KB = ~5000–8000 lines of typical code — more than enough
 MAX_PASTE_CHARS = 200 * 1024
 
 
@@ -339,9 +317,6 @@ def _format_feature_breakdown(breakdown: dict) -> dict:
     return cleaned
 
 
-# ════════════════════════════════════════════════════════════════
-#  🔹 CODE ANALYZE  —  POST /api/code-analyze/
-# ════════════════════════════════════════════════════════════════
 
 @api_view(["POST"])
 def code_analyze(request):
@@ -414,13 +389,6 @@ def code_analyze(request):
 
     original_lines = len(code_text.splitlines())
 
-    # ── 4. Run the v6.1 detector ──────────────────────────────────
-    # Direct call — no ThreadPoolExecutor needed.
-    # analyze_code_ai_likelihood is pure CPU/regex (no I/O, no blocking).
-    # ThreadPoolExecutor was causing 200-500ms overhead on Windows per request
-    # due to thread pool creation/teardown cost on every API call.
-    # Stratified sampling (≤800 lines full, >800 lines → 4×200 zones) is
-    # handled entirely inside analyze_code_ai_likelihood.
     try:
         result = analyze_code_ai_likelihood(code_text)
     except Exception as e:
@@ -509,10 +477,6 @@ def code_analyze(request):
         }
     )
 
-
-# ════════════════════════════════════════════════════════════════
-#  🔹 PASTE vs PASTE COMPARISON  (with non-code detection)
-# ════════════════════════════════════════════════════════════════
 
 @api_view(['POST'])
 def compare_code(request):
@@ -640,10 +604,6 @@ def compare_code(request):
         "risk_emoji":  risk_emoji(risk),
     })
 
-
-# ════════════════════════════════════════════════════════════════
-#  🔹 BATCH FILE COMPARISON  (ALL vs ALL, with non-code detection)
-# ════════════════════════════════════════════════════════════════
 
 @api_view(['POST'])
 def compare_batch(request):

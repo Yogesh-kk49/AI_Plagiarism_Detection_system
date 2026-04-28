@@ -578,11 +578,8 @@ def verify_otp(request):
     if otp_record.otp != str(entered_otp):
         return Response({"error": "Invalid OTP. Please try again."}, status=400)
 
-    # ✅ Mark verified in DB
     otp_record.is_verified = True
     otp_record.save()
-
-    # ✅ Grant access in session
     request.session["otp_verified"] = True
     request.session["code_access"]  = True
     request.session.modified = True
@@ -595,12 +592,6 @@ def verify_otp(request):
     }, status=200)
 
 
-# ─────────────────────────────────────────────
-# CHECK AUTH  ← THE FIXED VERSION
-# Problem was: checking request.user.is_authenticated
-# which is Django's user system — NOT your session system.
-# Fix: read directly from session keys.
-# ─────────────────────────────────────────────
 @api_view(['GET'])
 def check_auth(request):
     # Read directly from session — no Django user auth needed
@@ -611,8 +602,6 @@ def check_auth(request):
     name            = request.session.get("user_name",       None)
     picture         = request.session.get("user_picture",    None)
 
-    # Require BOTH Google + OTP for code access
-    # (re-derive this so it can't be spoofed by a stale session flag)
     effective_code_access = google_verified and otp_verified
 
     return JsonResponse({
@@ -685,7 +674,6 @@ def code_plagiarism(request):
     
 @api_view(['POST'])
 def submit_feedback(request):
-    # 🔒 Require login
     user_email = request.session.get("user_email")
     user_name  = request.session.get("user_name", "User")
 
@@ -695,7 +683,6 @@ def submit_feedback(request):
             status=403
         )
 
-    # 📥 Get data from frontend
     category = request.data.get("category", "other").strip()
     message  = request.data.get("message", "").strip()
 
@@ -705,7 +692,7 @@ def submit_feedback(request):
             status=400
         )
 
-    # ✅ Save to DB
+    
     FeedbackSubmission.objects.create(
         name=user_name,
         email=user_email,
@@ -713,7 +700,7 @@ def submit_feedback(request):
         message=message
     )
 
-    # ✅ Send email (FIXED)
+   
     try:
         email = EmailMessage(
             subject=f"[Feedback] {category.upper()} from {user_name}",
@@ -725,13 +712,12 @@ def submit_feedback(request):
             ),
             from_email="ai.plagiarism49@gmail.com",
             to=["ai.plagiarism49@gmail.com"],
-            reply_to=[user_email],   # ✅ Now works
+            reply_to=[user_email],   
         )
 
         email.send()
 
     except Exception as e:
-        # ⚠️ Don't crash API if email fails
         print("EMAIL ERROR:", str(e))
 
     return Response(

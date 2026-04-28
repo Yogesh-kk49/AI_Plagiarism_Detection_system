@@ -540,13 +540,6 @@ class UltimateAIDetector:
         print(f"   Max words   : {self.MAX_WORDS}  (longer texts sampled from distributed sections)")
         print(f"   Ready.\n")
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  LONG-TEXT SAMPLER
-    #  Texts exceeding MAX_WORDS are reduced by sampling evenly-spaced
-    #  sentence-windows from beginning, middle thirds, and end so that
-    #  all structural regions of the document are represented.
-    # ══════════════════════════════════════════════════════════════════════════
-
     def _sample_text(self, text, original_word_count):
         """
         Sample up to MAX_WORDS words from a long text while preserving
