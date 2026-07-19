@@ -274,7 +274,7 @@ const LoggedInCard = ({ user, onLogout, onGoToOptions, onGoToHistory }) => (
         fontWeight: 600,
       }}>
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-        2FA Verified · Session Active
+        Verified · Session Active
       </div>
     </div>
 

@@ -154,7 +154,7 @@ const ProfileCorner = ({ user, onLogout, navigate }) => {
                 <div style={{display:"inline-flex", alignItems:"center", gap:6, marginTop:8, padding:"4px 12px", borderRadius:999,
                   background:"rgba(34,197,94,0.15)", border:"1px solid rgba(34,197,94,0.4)", fontSize:"0.75rem", color:"#86efac",
                   fontFamily:"Inter, sans-serif", fontWeight:600}}>
-                  <span style={{width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block"}} /> 2FA Verified
+                  <span style={{width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block"}} /> Verified
                 </div>
               </div>
               <button className="history-btn" onClick={()=>{setOpen(false);navigate("/history");}} style={{

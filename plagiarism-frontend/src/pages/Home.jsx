@@ -407,22 +407,11 @@ export default function Home() {
           <div style={styles.logoGlow}></div>
           <div style={styles.logoCircle}></div>
           <div style={styles.logoIcon}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ animation: "starPulse 2s ease-in-out infinite" }}>
-              <path
-                d="M12 2L14.9 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L9.1 8.26L12 2Z"
-                fill="url(#starGrad)"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-                strokeLinejoin="round"
-              />
-              <defs>
-                <linearGradient id="starGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#f8fafc" />
-                  <stop offset="50%" stopColor="#c4b5fd" />
-                  <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img
+              src="/yk-icon.png"
+              alt="YK Product"
+              style={{ width: 32, height: 32, objectFit: "contain" }}
+            />
           </div>
         </div>
       </div>
@@ -523,7 +512,7 @@ export default function Home() {
                         )}
                         <div style={styles.verifiedBadge}>
                           <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                          2FA Verified
+                          Verified
                         </div>
                       </div>
                     </div>

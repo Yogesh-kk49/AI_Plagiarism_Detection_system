@@ -20,6 +20,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# ─────────────────────────────────────────────
+# © 2026 YK Product. All rights reserved.
+# Designed • Built • Delivered — YK Product
+# ─────────────────────────────────────────────
+admin.site.site_header = "AI Plagiarism Detection System — YK Product"
+admin.site.site_title = "YK Product Admin"
+admin.site.index_title = "© 2026 YK Product. All rights reserved."
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('detector.urls')),

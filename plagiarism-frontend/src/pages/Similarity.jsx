@@ -199,7 +199,7 @@ const ProfileCorner = ({ user, onLogout, navigate }) => {
                 <p style={{ fontFamily:"Inter,sans-serif", fontWeight:700, color:"#f1f5f9", fontSize:"1rem", marginBottom:4 }}>{user?.name || "—"}</p>
                 <p style={{ fontFamily:"Inter,sans-serif", color:"#94a3b8", fontSize:"0.85rem" }}>{user?.email || "—"}</p>
                 <div style={{ display:"inline-flex", alignItems:"center", gap:6, marginTop:8, padding:"4px 12px", borderRadius:999, background:"rgba(34,197,94,0.15)", border:"1px solid rgba(34,197,94,0.4)", fontSize:"0.75rem", color:"#86efac", fontFamily:"Inter,sans-serif", fontWeight:600 }}>
-                  <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} /> 2FA Verified
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} /> Verified
                 </div>
               </div>
               <button className="history-btn-sim" onClick={() => { setOpen(false); navigate("/history"); }} style={{ width:"100%", padding:"0.8rem 1rem", borderRadius:14, border:"1px solid rgba(124,58,237,0.4)", background:"rgba(124,58,237,0.12)", color:"#c4b5fd", fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:"0.9rem", cursor:"pointer", transition:"all 0.3s ease", marginBottom:"0.75rem", textAlign:"left", display:"flex", alignItems:"center", gap:8 }}>📜 View Analysis History</button>

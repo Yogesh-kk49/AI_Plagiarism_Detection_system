@@ -1,5 +1,11 @@
 # 🤖 AI Plagiarism Detection System
 
+<p align="center">
+  <img src="./plagiarism-frontend/public/yk-logo-full.png" alt="YK Product" width="220" />
+</p>
+
+<p align="center"><sub>© 2026 YK Product. All rights reserved. · Designed • Built • Delivered</sub></p>
+
 An advanced **AI-powered plagiarism detection system** built using **Django**, designed to detect both **content similarity** and **AI-generated text** using heuristic and intelligent analysis techniques.
 
 This project is ideal for **academic institutions, instructors, and evaluation systems** to identify copied or AI-assisted submissions effectively.
@@ -182,9 +188,12 @@ Final Year Computer Science Student
 
 ---
 
-## 📄 License
+## 📄 License & Copyright
 
-This project is developed for **educational and research purposes**.
+© 2026 **YK Product**. All rights reserved.
+This project and its source code are developed for **educational and research purposes**. Unauthorized commercial redistribution is not permitted without prior written consent.
+
+*Designed • Built • Delivered — YK Product*
 
 ---
 

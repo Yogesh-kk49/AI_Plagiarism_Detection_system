@@ -270,7 +270,7 @@ const ProfileCorner = ({ user, onLogout }) => {
                         display: "inline-block",
                       }}
                     />
-                    2FA Verified
+                    Verified
                   </div>
                 </div>
 
@@ -465,7 +465,7 @@ const AboutPanel = () => (
       </div>
       <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"1.5rem",color:"#f8fafc",lineHeight:1.2,marginBottom:"0.6rem"}}>AI Plagiarism Detection System</h2>
       <p style={{fontFamily:"DM Sans,sans-serif",color:"#cbd5e1",fontSize:"0.9rem",lineHeight:1.75}}>
-        A full-stack academic integrity platform combining Google OAuth 2FA, NLP-based essay analysis, and heuristic AI code detection.
+        A full-stack academic integrity platform combining Google OAuth, NLP-based essay analysis, and heuristic AI code detection.
       </p>
     </div>
 
@@ -476,7 +476,7 @@ const AboutPanel = () => (
         content:"Compares two code submissions using normalized token-based similarity, structural pattern matching, and AST-level analysis. Supports Python, JavaScript, Java, C, C++, and HTML. Detects clone types including copy-paste, renamed variables, and restructured logic. Severity is classified as Low, Medium, or High based on the similarity score." },
       { icon:"🤖", title:"AI-Generated Code Analysis", color:"rgba(251,191,36,0.14)", border:"rgba(251,191,36,0.4)", titleColor:"#fde68a",
         content:"Heuristic engine that evaluates 20+ code signals to determine the likelihood of AI generation. Signals include comment density, function naming regularity, cyclomatic complexity, indentation consistency, and boilerplate patterns. Returns AI probability, human probability, and a feature-by-feature breakdown." },
-      { icon:"🔐", title:"2FA Security System", color:"rgba(139,92,246,0.18)", border:"rgba(139,92,246,0.45)", titleColor:"#ddd6fe",
+      { icon:"🔐", title:"Login Security", color:"rgba(139,92,246,0.18)", border:"rgba(139,92,246,0.45)", titleColor:"#ddd6fe",
         content:"All protected features require Google OAuth login. Sessions are server-managed using Django session cookies — no sensitive data is stored in the browser beyond your name and email for display." },
       { icon:"📜", title:"Analysis History", color:"rgba(236,72,153,0.14)", border:"rgba(236,72,153,0.4)", titleColor:"#fbcfe8",
         content:"Every analysis you run — essay comparison, code comparison, and AI detection — is automatically saved to your account history. You can review past results including type, title, score, risk level, and timestamp from the History page." },
@@ -727,6 +727,18 @@ const HelpPanel = ({ isLoggedIn }) => {
     </button>
   </>
 )}
+
+<p style={{
+  marginTop: "2rem",
+  paddingTop: "1rem",
+  borderTop: "1px solid rgba(255,255,255,0.07)",
+  textAlign: "center",
+  fontFamily: "DM Sans, sans-serif",
+  fontSize: "0.8rem",
+  color: "#cbd5e1",
+}}>
+  © {new Date().getFullYear()} <strong style={{ color: "#f1f5f9" }}>YK Product</strong> — All rights reserved. · Designed · Built · Delivered
+</p>
 </div>
 );
 };
@@ -772,6 +784,16 @@ const TermsPanel = () => (
         These terms may be updated periodically. Continued use of the platform after changes constitutes acceptance of the revised terms.
       </p>
     </div>
+
+    <p style={{
+      marginTop: "1.5rem",
+      textAlign: "center",
+      fontFamily: "DM Sans, sans-serif",
+      fontSize: "0.8rem",
+      color: "#cbd5e1",
+    }}>
+      © {new Date().getFullYear()} <strong style={{ color: "#f1f5f9" }}>YK Product</strong> — All rights reserved. · Designed · Built · Delivered
+    </p>
   </div>
 );
 
@@ -850,9 +872,17 @@ const HamburgerDrawer = ({ open, onClose, isVerified }) => {
                 v1.0.0 · Built with Django + React
               </span><br/>
               <span style={{color:"#94a3b8"}}>
-                Protected by 2FA · Session Encrypted
+                Session Encrypted
               </span>
             </p>
+            </div>
+
+            <div style={{marginTop:"1.2rem",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+              <img src="/yk-icon.png" alt="YK Product" style={{width:22,height:22,objectFit:"contain"}} />
+              <p style={{fontFamily:"DM Sans,sans-serif",fontSize:"0.76rem",color:"#cbd5e1",textAlign:"center"}}>
+                © {new Date().getFullYear()} <strong style={{color:"#f1f5f9"}}>YK Product</strong><br/>
+                Designed · Built · Delivered
+              </p>
             </div>
             </div>
           ) : activeSection === "about" ? <AboutPanel />
@@ -981,7 +1011,7 @@ export default function Options() {
         )}
 
         <p style={{textAlign:"center",marginTop:"2.5rem",fontFamily:"DM Sans,sans-serif",color:"#ef4444",fontSize:"1rem",fontWeight:600,animation:"fadeIn 0.8s ease both 0.6s"}}>
-          Your session is encrypted and protected by 2FA.
+          Your session is encrypted and protected.
         </p>
       </div>
     </div>

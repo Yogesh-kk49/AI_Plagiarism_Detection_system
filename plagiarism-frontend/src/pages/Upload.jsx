@@ -169,7 +169,7 @@ const ProfileCorner = ({ user, onLogout, navigate }) => {
                   fontSize:"0.75rem", color:"#86efac", fontFamily:"Inter, sans-serif", fontWeight:600
                 }}>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} />
-                  2FA Verified
+                  Verified
                 </div>
               </div>
               <button className="history-btn-up" onClick={() => { setOpen(false); navigate("/history"); }} style={{
@@ -373,7 +373,7 @@ const DownloadPDFButton = ({ aiResult, pdfTargetRef, fileName, activeTab }) => {
       pdf.setLineWidth(0.3);
       pdf.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
       resetText(8, "normal", theme.muted);
-      pdf.text("Confidential AI analysis summary", margin, pageHeight - 6);
+      pdf.text(`Confidential AI analysis summary — © ${new Date().getFullYear()} YK Product`, margin, pageHeight - 6);
       pdf.text(clean(`Page ${pageNo}`), pageWidth - margin, pageHeight - 6, { align: "right" });
     };
 
