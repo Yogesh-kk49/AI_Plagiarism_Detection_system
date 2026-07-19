@@ -1,17 +1,13 @@
 from django.apps import AppConfig
-import threading
 
 class DetectorConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'  # ← fix this
+    default_auto_field = 'django.db.models.BigAutoField'
     name = 'detector'
 
-    def ready(self):
-        def preload():
-            try:
-                print("⏳ Pre-loading AI detector models...")
-                from .utils.ai_heuristic import get_detector
-                get_detector()
-                print("✅ AI detector ready.")
-            except Exception as e:
-                print(f"⚠️ Detector preload failed: {e}")
-        threading.Thread(target=preload, daemon=True).start()
+    # No eager model preload here on purpose: ai_heuristic.get_detector()
+    # already lazy-loads and caches the model on first real call (see the
+    # `_detector` singleton at the bottom of ai_heuristic.py). Loading torch
+    # + transformers + the HF model at server boot competed with Django's
+    # own startup for memory and caused OOM kills on smaller instances.
+    # The model now only loads into memory the first time someone actually
+    # hits the AI-check endpoint.
