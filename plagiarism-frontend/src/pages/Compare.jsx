@@ -1,6 +1,8 @@
+import { BASE_URL } from "../config";
 import { useState, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import useResponsive from "../hooks/useResponsive";
 
 // ── PDF Download Button ──
 const DownloadPDFButton = ({ aiResult, fileName, activeTab }) => {
@@ -543,6 +545,7 @@ const Card = ({ children, style={}, delay }) => (
 
 export default function CodeAnalyzer() {
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
   const [code, setCode]             = useState("");
   const [language, setLanguage]     = useState("");
   const [file, setFile]             = useState(null);
@@ -553,7 +556,7 @@ export default function CodeAnalyzer() {
   const [isVerified, setIsVerified] = useState(false);
   const [user, setUser]             = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
   useEffect(() => {
     injectStyles();
@@ -657,7 +660,8 @@ export default function CodeAnalyzer() {
       {/* ── TOP BAR ── */}
       <div style={{
         display:"flex", alignItems:"center", gap:20,
-        padding:"16px 32px",
+        padding: isMobile ? "14px 20px" : "16px 32px",
+        flexWrap: isMobile ? "wrap" : "nowrap",
         borderBottom:"1px solid rgba(255,255,255,0.08)",
         flexShrink:0, position:"relative", zIndex:10,
         animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
@@ -707,17 +711,21 @@ export default function CodeAnalyzer() {
       </div>
 
       {/* Main Content */}
-      <div style={{flex:1, overflow:"hidden", display:"flex", position:"relative", zIndex:5}}>
+      <div style={{flex:1, overflow:isMobile ? "auto" : "hidden", display:"flex",
+        flexDirection: isMobile ? "column" : "row", position:"relative", zIndex:5}}>
 
         {/* LEFT PANEL */}
-        <div style={{width:"50%", borderRight:"1px solid rgba(255,255,255,0.08)", display:"flex", 
-          flexDirection:"column", overflow:"hidden", backdropFilter:"blur(8px)"}}>
+        <div style={{width: isMobile ? "100%" : "50%",
+          borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+          borderBottom: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
+          display:"flex",
+          flexDirection:"column", overflow: isMobile ? "visible" : "hidden", backdropFilter:"blur(8px)"}}>
           <div style={{flex:1, overflowY:"auto", padding:"32px 40px 20px", 
             scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent"}}>
 
             <Card delay="0.1s" style={{marginBottom:"16px", borderRadius:28}}>
               <StepLabel n="1" title="Select Programming Language" sub="Choose the language your code is written in." />
-              <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12}}>
+              <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px,1fr))", gap:12}}>
                 {Object.entries(LANG_CFG).map(([key, cfg]) => {
                   const active = language === key;
                   return (
@@ -839,7 +847,10 @@ export default function CodeAnalyzer() {
         </div>
 
         {/* RIGHT PANEL - Results */}
-        <div style={{width:"50%", overflowY:"auto", padding:"32px 40px 32px", height:"100%",flexDirection:"column", overflow:"hidden",
+        <div style={{width: isMobile ? "100%" : "50%", overflowY:"auto",
+          padding: isMobile ? "24px 20px 32px" : "32px 40px 32px",
+          height: isMobile ? "auto" : "100%", flexDirection:"column",
+          overflow: isMobile ? "visible" : "hidden",
           scrollbarWidth:"thin", scrollbarColor:"rgba(99,102,241,0.3) transparent",
           background:"rgba(0,0,0,0.1)", backdropFilter:"blur(8px)"}}>
 
@@ -896,7 +907,7 @@ export default function CodeAnalyzer() {
                 </div>
               )}
 
-              <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"16px", marginBottom:"2rem"}}>
+              <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px,1fr))", gap:"16px", marginBottom:"2rem"}}>
                 <SummaryCard icon="🧠" label="VERDICT" value={result.label}
                   sub={`Confidence: ${result.confidence}`}
                   accentColor={verdictColor} delay="0.05s" />
@@ -967,7 +978,7 @@ export default function CodeAnalyzer() {
                 <p style={{fontFamily:"Inter, sans-serif", fontWeight:700, color:"#f1f5f9", fontSize:"1rem", marginBottom:"1.5rem", letterSpacing:"-0.01em"}}>
                   📋 Code Statistics
                 </p>
-                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16}}>
+                <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px,1fr))", gap:16}}>
                   <MetaCard label="LINES OF CODE"  value={result.lines_of_code ?? "—"} />
                   <MetaCard label="DETECTED LANG"  value={result.detected_language?.toUpperCase() ?? "—"} />
                   <MetaCard label="SELECTED LANG"  value={language.toUpperCase()} />

@@ -1,5 +1,7 @@
+import { BASE_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import useResponsive from "../hooks/useResponsive";
 
 const styles = {
   wrapper: {
@@ -129,7 +131,7 @@ const styles = {
     display: "flex",
     gap: "1rem",
     justifyContent: "center",
-    flexWrap: "nowrap",
+    flexWrap: "wrap",
     alignItems: "center",
   },
   button: {
@@ -249,6 +251,7 @@ const styles = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
   const [isGetStartedHovered, setIsGetStartedHovered] = useState(false);
   const [isLoginHovered, setIsLoginHovered] = useState(false);
   const [isAccountHovered, setIsAccountHovered] = useState(false);
@@ -258,7 +261,7 @@ export default function Home() {
   const dropdownRef = useRef(null);
   const authRan = useRef(false);
 
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
   // ✅ Check real session from backend (same as Options.jsx)
   useEffect(() => {
@@ -474,7 +477,16 @@ export default function Home() {
                 </button>
 
                 {dropdownOpen && (
-                  <div style={styles.dropdown}>
+                  <div style={{
+                    ...styles.dropdown,
+                    ...(isMobile ? {
+                      top: "calc(100% + 10px)",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      minWidth: "calc(100vw - 40px)",
+                      maxWidth: "320px",
+                    } : {}),
+                  }}>
                     <div style={styles.dropdownHeader}>
                       {/* Avatar */}
                       {user.picture ? (

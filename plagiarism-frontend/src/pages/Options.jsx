@@ -1,3 +1,4 @@
+import { BASE_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 
@@ -509,7 +510,7 @@ const HelpPanel = ({ isLoggedIn }) => {
   setError("");
 
   try {
-    const res = await fetch("http://localhost:8000/api/feedback/", {
+    const res = await fetch(`${BASE_URL}/api/feedback/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -890,7 +891,7 @@ export default function Options() {
   const [loading, setLoading]       = useState(true);
   const [user, setUser]             = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
   useEffect(() => {
     injectStyles();

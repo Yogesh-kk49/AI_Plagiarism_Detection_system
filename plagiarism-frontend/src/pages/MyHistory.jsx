@@ -1,3 +1,4 @@
+import { BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,7 +11,7 @@ export default function MyHistory() {
   const [showClearModal, setShowClearModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
   useEffect(() => {
     fetchHistory();

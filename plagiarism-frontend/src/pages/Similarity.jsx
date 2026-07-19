@@ -1,7 +1,9 @@
+import { BASE_URL } from "../config";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { jsPDF } from "jspdf";
+import useResponsive from "../hooks/useResponsive";
 
 const forceBg = () => {
   document.documentElement.style.background = "#0a0a15";
@@ -238,6 +240,7 @@ const SimBtn = ({ children, onClick, disabled, cls, bg, color, shadow, style = {
 
 export default function Similarity() {
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
 
   const [files,         setFiles]         = useState([]);
   const [uploadedDocs,  setUploadedDocs]  = useState([]);
@@ -253,7 +256,7 @@ export default function Similarity() {
   const [isVerified,    setIsVerified]    = useState(false);
   const [authLoading,   setAuthLoading]   = useState(true);
 
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
   useEffect(() => {
     forceBg();
@@ -861,7 +864,11 @@ const generatePDF = () => {
       )}
 
       {/* paddingRight:100 reserves space for the fixed profile avatar (52px + 28px margin + buffer) */}
-      <div style={{ display:"flex", alignItems:"center", gap:20, padding:"20px 48px", paddingRight:100, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0, position:"relative", zIndex:10, animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both", backdropFilter:"blur(12px)" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:20,
+        padding: isMobile ? "16px 20px" : "20px 48px",
+        paddingRight: isMobile ? 20 : 100,
+        flexWrap: isMobile ? "wrap" : "nowrap",
+        borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0, position:"relative", zIndex:10, animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both", backdropFilter:"blur(12px)" }}>
         <button className="sim-back" onClick={() => navigate(-1)} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:999, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.4)", color:"#f87171", fontWeight:600, cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.9rem", transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}>← Back</button>
         <span style={{ fontSize:"1.3rem" }}>📊</span>
         <span style={{ fontWeight:700, fontSize:"1.2rem", color:"#f1f5f9" }}>Document Similarity Analysis</span>
@@ -888,10 +895,14 @@ const generatePDF = () => {
       </div>
 
       
-      <div style={{ flex:1, overflow:"hidden", display:"flex", position:"relative", zIndex:5 }}>
+      <div style={{ flex:1, overflow: isMobile ? "auto" : "hidden", display:"flex",
+        flexDirection: isMobile ? "column" : "row", position:"relative", zIndex:5 }}>
 
         {/* ════ LEFT PANEL — Inputs ════ */}
-        <div style={{ width:"50%", borderRight:"1px solid rgba(255,255,255,0.08)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        <div style={{ width: isMobile ? "100%" : "50%",
+          borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+          borderBottom: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
+          display:"flex", flexDirection:"column", overflow: isMobile ? "visible" : "hidden" }}>
 
           <div style={{ flex:1, overflowY:"auto", padding:"24px 32px 16px", scrollbarWidth:"thin", scrollbarColor:"rgba(251,191,36,0.28) transparent" }}>
 
@@ -1047,7 +1058,10 @@ const generatePDF = () => {
         </div>
 
         {/* ════ RIGHT PANEL — Results ════ */}
-        <div style={{ width:"50%", overflowY:"auto", padding:"24px 32px 40px", scrollbarWidth:"thin", scrollbarColor:"rgba(251,191,36,0.28) transparent", background:"rgba(0,0,0,0.1)", backdropFilter:"blur(8px)" }}>
+        <div style={{ width: isMobile ? "100%" : "50%", overflowY:"auto",
+          padding: isMobile ? "20px 20px 32px" : "24px 32px 40px",
+          scrollbarWidth:"thin", scrollbarColor:"rgba(251,191,36,0.28) transparent",
+          background:"rgba(0,0,0,0.1)", backdropFilter:"blur(8px)" }}>
 
           {/* Empty state */}
           {!hasResults && !loading && (

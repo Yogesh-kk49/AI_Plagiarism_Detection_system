@@ -1,7 +1,9 @@
+import { BASE_URL } from "../config";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { jsPDF } from "jspdf";
+import useResponsive from "../hooks/useResponsive";
 
 const injectStyles = () => {
   if (document.getElementById("compare-styles")) return;
@@ -770,7 +772,8 @@ const generatePDF = (result, resultMode, isPasted = false) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CompareCode() {
   const navigate = useNavigate();
-  const BASE_URL = "http://localhost:8000";
+  const { isMobile } = useResponsive();
+  // BASE_URL now imported from "../config"
 
   const [tab,           setTab]           = useState("paste");
   const [code1,         setCode1]         = useState("");
@@ -858,10 +861,11 @@ export default function CompareCode() {
 
       {/* ── Header ── */}
       <div style={{
-        padding:"16px 32px",
+        padding: isMobile ? "14px 20px" : "16px 32px",
         borderBottom:"1px solid rgba(255,255,255,0.08)",
         flexShrink:0, zIndex:10, backdropFilter:"blur(12px)",
         display:"flex", alignItems:"center", gap:20,
+        flexWrap: isMobile ? "wrap" : "nowrap",
         animation:"slideDownGlow 0.5s ease both"
       }}>
         <button className="ca-back" onClick={()=>navigate(-1)} style={{
@@ -900,10 +904,13 @@ export default function CompareCode() {
       </div>
 
       {/* ── Body ── */}
-      <div style={{flex:1,display:"flex",overflow:"hidden",position:"relative",zIndex:5}}>
+      <div style={{flex:1,display:"flex",flexDirection: isMobile ? "column" : "row",overflow: isMobile ? "auto" : "hidden",position:"relative",zIndex:5}}>
 
         {/* LEFT */}
-        <div style={{width:"55%",borderRight:"1px solid rgba(255,255,255,0.07)",overflowY:"auto",padding:"24px 28px",scrollbarWidth:"thin",scrollbarColor:"rgba(99,102,241,0.3) transparent",display:"flex",flexDirection:"column",gap:"1rem"}}>
+        <div style={{width: isMobile ? "100%" : "55%",
+          borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+          borderBottom: isMobile ? "1px solid rgba(255,255,255,0.07)" : "none",
+          overflowY:"auto",padding: isMobile ? "20px 20px" : "24px 28px",scrollbarWidth:"thin",scrollbarColor:"rgba(99,102,241,0.3) transparent",display:"flex",flexDirection:"column",gap:"1rem"}}>
           <div style={{display:"flex",gap:10}}>{tabBtn("paste","📋 Paste Code")}{tabBtn("files","📁 Upload Files")}</div>
           {apiError&&<ErrorBanner error={apiError} onDismiss={clearError}/>}
 
@@ -954,7 +961,7 @@ export default function CompareCode() {
         </div>
 
         {/* RIGHT */}
-        <div style={{flex:1,overflowY:"auto",padding:"24px 28px",scrollbarWidth:"thin",scrollbarColor:"rgba(99,102,241,0.3) transparent",display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,overflowY:"auto",padding: isMobile ? "20px 20px" : "24px 28px",scrollbarWidth:"thin",scrollbarColor:"rgba(99,102,241,0.3) transparent",display:"flex",flexDirection:"column"}}>
           <p style={{fontSize:"0.8rem",fontWeight:600,color:"#94a3b8",fontFamily:"Inter,sans-serif",marginBottom:"1rem"}}>📊 RESULTS</p>
 
           {!result&&!loading&&!apiError&&(

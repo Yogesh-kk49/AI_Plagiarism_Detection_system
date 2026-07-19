@@ -1,3 +1,4 @@
+import { BASE_URL } from "../config";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
@@ -364,7 +365,7 @@ export default function Login() {
   const [loggedInUser, setLoggedInUser] = useState(null);
   const otpRef = useRef(null);
 
-  const BASE_URL = "http://localhost:8000";
+  // BASE_URL now imported from "../config"
 
 
   useEffect(() => {
