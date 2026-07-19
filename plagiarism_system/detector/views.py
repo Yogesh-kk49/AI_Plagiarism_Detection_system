@@ -8,19 +8,16 @@ from django.conf import settings
 # Django
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from django.core.mail import send_mail
 from django.utils import timezone
-from django.core.mail import EmailMessage
+from .utils.email_sender import send_email_via_brevo
 # Google OAuth
 from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
 
 # Standard Library
 import itertools
-import random
 import os
 import re
-from datetime import timedelta
 from difflib import SequenceMatcher
 
 # Models
@@ -28,7 +25,6 @@ from .models import (
     UploadedDocument,
     PlagiarismReport,
     UserHistory,
-    EmailOTP,
     FeedbackSubmission
 )
 
@@ -486,8 +482,7 @@ def google_login(request):
         request.session["user_email"]     = email
         request.session["user_picture"]   = picture
         request.session["google_verified"] = True
-        request.session["otp_verified"]   = False
-        request.session["code_access"]    = False
+        request.session["code_access"]    = True
 
         # Force session save so cookie is written
         request.session.modified = True
@@ -498,7 +493,7 @@ def google_login(request):
             "email":   email,
             "picture": picture,
             "google":  "verified",
-            "message": "Google login successful. Please verify OTP."
+            "message": "Google login successful."
         }, status=200)
 
     except ValueError as e:
@@ -511,102 +506,19 @@ def google_login(request):
         return Response({"error": str(e)}, status=500)
 
 
-# ─────────────────────────────────────────────
-# STEP 2: Send OTP
-# ─────────────────────────────────────────────
-@api_view(['POST'])
-def send_otp(request):
-    print("SESSION DATA:", dict(request.session))  # debug
-
-    google_email    = request.session.get("user_email")
-    google_verified = request.session.get("google_verified", False)
-
-    # Must have completed Google login first
-    if not google_email or not google_verified:
-        return Response({
-            "error":          "Google login required before OTP",
-            "session_user":   google_email,
-            "google_verified": google_verified
-        }, status=403)
-
-    # Generate OTP
-    otp = str(random.randint(100000, 999999))
-
-    # Remove old OTPs, save new one
-    EmailOTP.objects.filter(email=google_email).delete()
-    EmailOTP.objects.create(email=google_email, otp=otp)
-
-    # Send email
-    send_mail(
-        subject="AI Plagiarism System - Code Access OTP",
-        message=f"Your OTP for Code Access is: {otp}\n\nThis OTP expires in 5 minutes.",
-        from_email="ai.plagiarism49@gmail.com",
-        recipient_list=[google_email],
-        fail_silently=False,
-    )
-
-    return Response({
-        "message": f"OTP sent to {google_email}"
-    }, status=200)
-
-
-# ─────────────────────────────────────────────
-# STEP 3: Verify OTP
-# ─────────────────────────────────────────────
-@api_view(['POST'])
-def verify_otp(request):
-    google_email = request.session.get("user_email")
-    entered_otp  = request.data.get("otp")
-
-    if not google_email:
-        return Response({"error": "Google login required before OTP"}, status=403)
-
-    if not entered_otp:
-        return Response({"error": "OTP required"}, status=400)
-
-    otp_record = EmailOTP.objects.filter(email=google_email).last()
-
-    if not otp_record:
-        return Response({"error": "No OTP found. Please request a new one."}, status=404)
-
-    # Check expiry (5 minutes)
-    if timezone.now() - otp_record.created_at > timedelta(minutes=5):
-        otp_record.delete()
-        return Response({"error": "OTP expired. Please request a new one."}, status=400)
-
-    # Check match
-    if otp_record.otp != str(entered_otp):
-        return Response({"error": "Invalid OTP. Please try again."}, status=400)
-
-    otp_record.is_verified = True
-    otp_record.save()
-    request.session["otp_verified"] = True
-    request.session["code_access"]  = True
-    request.session.modified = True
-    request.session.save()
-
-    return Response({
-        "message": "2FA Verified Successfully",
-        "access":  "granted",
-        "email":   google_email
-    }, status=200)
-
-
 @api_view(['GET'])
 def check_auth(request):
     # Read directly from session — no Django user auth needed
     google_verified = request.session.get("google_verified", False)
-    otp_verified    = request.session.get("otp_verified",    False)
     code_access     = request.session.get("code_access",     False)
     email           = request.session.get("user_email",      None)
     name            = request.session.get("user_name",       None)
     picture         = request.session.get("user_picture",    None)
 
-    effective_code_access = google_verified and otp_verified
+    effective_code_access = google_verified and code_access
 
     return JsonResponse({
         "google_verified": google_verified,
-        "otp_verified":    otp_verified,
         "code_access":     effective_code_access,
         "email":           email,
         "name":            name,
@@ -629,12 +541,11 @@ def logout(request):
 @api_view(['POST'])
 def code_plagiarism(request):
     google_verified = request.session.get("google_verified", False)
-    otp_verified    = request.session.get("otp_verified",    False)
 
-    # Enforce full 2FA
-    if not (google_verified and otp_verified):
+    # Enforce Google login
+    if not google_verified:
         return Response({
-            "error":  "2FA required (Google login + OTP verification)",
+            "error":  "Google login required",
             "access": "denied"
         }, status=403)
 
@@ -666,7 +577,6 @@ def code_plagiarism(request):
         },
         "auth": {
             "google_verified": google_verified,
-            "otp_verified":    otp_verified,
             "access":          "granted"
         },
         "message": "Code comparison successful"
@@ -702,20 +612,17 @@ def submit_feedback(request):
 
    
     try:
-        email = EmailMessage(
+        send_email_via_brevo(
             subject=f"[Feedback] {category.upper()} from {user_name}",
-            body=(
+            message=(
                 f"Name: {user_name}\n"
                 f"Email: {user_email}\n"
                 f"Category: {category}\n\n"
                 f"Message:\n{message}"
             ),
-            from_email="ai.plagiarism49@gmail.com",
-            to=["ai.plagiarism49@gmail.com"],
-            reply_to=[user_email],   
+            to_email="ai.plagiarism49@gmail.com",
+            reply_to=user_email,
         )
-
-        email.send()
 
     except Exception as e:
         print("EMAIL ERROR:", str(e))

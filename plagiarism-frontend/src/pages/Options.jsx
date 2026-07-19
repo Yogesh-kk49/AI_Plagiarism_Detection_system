@@ -1,6 +1,6 @@
-import { BASE_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
+import { BASE_URL } from "../config";
 
 const injectStyles = () => {
   if (document.getElementById("options-styles")) return;
@@ -394,7 +394,7 @@ const ProfileCorner = ({ user, onLogout }) => {
                   fontSize: "0.95rem",
                 }}
               >
-                You are about to end your current session on this device. You can sign in again anytime using your Google account and OTP verification.
+                You are about to end your current session on this device. You can sign in again anytime using your Google account.
               </p>
             </div>
 
@@ -477,7 +477,7 @@ const AboutPanel = () => (
       { icon:"🤖", title:"AI-Generated Code Analysis", color:"rgba(251,191,36,0.14)", border:"rgba(251,191,36,0.4)", titleColor:"#fde68a",
         content:"Heuristic engine that evaluates 20+ code signals to determine the likelihood of AI generation. Signals include comment density, function naming regularity, cyclomatic complexity, indentation consistency, and boilerplate patterns. Returns AI probability, human probability, and a feature-by-feature breakdown." },
       { icon:"🔐", title:"2FA Security System", color:"rgba(139,92,246,0.18)", border:"rgba(139,92,246,0.45)", titleColor:"#ddd6fe",
-        content:"All protected features require Google OAuth login followed by a one-time password (OTP) sent to your Gmail. The OTP expires in 5 minutes. Sessions are server-managed using Django session cookies — no sensitive data is stored in the browser beyond your name and email for display." },
+        content:"All protected features require Google OAuth login. Sessions are server-managed using Django session cookies — no sensitive data is stored in the browser beyond your name and email for display." },
       { icon:"📜", title:"Analysis History", color:"rgba(236,72,153,0.14)", border:"rgba(236,72,153,0.4)", titleColor:"#fbcfe8",
         content:"Every analysis you run — essay comparison, code comparison, and AI detection — is automatically saved to your account history. You can review past results including type, title, score, risk level, and timestamp from the History page." },
     ].map((item,i) => (
@@ -574,7 +574,7 @@ const HelpPanel = ({ isLoggedIn }) => {
       <div style={{padding:"1.2rem",borderRadius:16,background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.3)",marginBottom:"1.5rem"}}>
         <p style={{fontFamily:"Syne,sans-serif",fontWeight:700,color:"#c7d2fe",fontSize:"0.9rem",marginBottom:"0.9rem"}}>💡 Common Issues</p>
         {[
-          ["OTP not received","Check your spam folder. OTP expires in 5 minutes — request a new one."],
+          ["Google sign-in fails","Clear cookies and try again. Make sure third-party cookies/popups aren't blocked in your browser."],
           ["Login loop","Clear cookies and try again. Make sure cookies are enabled in your browser."],
           ["File upload fails","Ensure file is under 5MB and is .txt, .pdf, or .docx format."],
           ["Results seem wrong","Try re-uploading with cleaner text. Scanned PDFs may reduce accuracy."],
@@ -746,7 +746,7 @@ const TermsPanel = () => (
 
     {[
       { icon:"🔐", title:"1. Authentication & Login", color:"rgba(99,102,241,0.18)", border:"rgba(99,102,241,0.4)", titleColor:"#c7d2fe",
-        points:["You must log in using a valid Google account. Shared or disposable accounts are not permitted.","A one-time password (OTP) will be sent to your registered Gmail each session. This OTP expires in 5 minutes.","You are responsible for keeping your account secure. Do not share OTPs or login credentials with others.","Multiple failed OTP attempts may temporarily restrict your access to prevent abuse.","Sessions are managed server-side. Closing the browser does not immediately invalidate your session — use Sign Out."] },
+        points:["You must log in using a valid Google account. Shared or disposable accounts are not permitted.","You are responsible for keeping your account secure. Do not share your login credentials with others.","Sessions are managed server-side. Closing the browser does not immediately invalidate your session — use Sign Out."] },
       { icon:"📜", title:"2. Analysis History & Data", color:"rgba(139,92,246,0.18)", border:"rgba(139,92,246,0.4)", titleColor:"#ddd6fe",
         points:["All analyses you perform (essay comparison, code comparison, AI detection) are automatically logged to your account.","History records include: analysis type, title, similarity score, risk level, and timestamp.","You may view your history at any time from the History page. History is tied to your verified Gmail address.","We do not store the actual content of your documents or code — only the results metadata.","History records may be retained for up to 90 days. After that, older records may be deleted automatically."] },
       { icon:"📄", title:"3. Acceptable Use", color:"rgba(34,197,94,0.14)", border:"rgba(34,197,94,0.4)", titleColor:"#86efac",
@@ -965,14 +965,14 @@ export default function Options() {
 
         <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:"1.2rem"}}>
           <FeatureCard icon="📝" title="Essay Plagiarism" subtitle="Detect similarities in essays, paragraphs, and written content using advanced text analysis." subtitleColor="#a5b4fc" badge="Free" locked={false} delay="0.2s" color="99,102,241" glowColor="99,102,241" onClick={()=>navigate("/upload")} />
-          <FeatureCard icon={isVerified?"💻":"🔒"} title="Code Plagiarism" subtitle={isVerified?"Compare code files with AST-level analysis, clone detection, and similarity scoring.":"Sign in with Google + OTP to unlock AI-powered code comparison."} subtitleColor={isVerified?"#86efac":"#64748b"} badge={isVerified?"Unlocked":"Login Required"} locked={!isVerified} delay="0.35s" color={isVerified?"34,197,94":"71,85,105"} glowColor={isVerified?"34,197,94":"71,85,105"} onClick={()=>isVerified?navigate("/compare"):navigate("/login")} />
+          <FeatureCard icon={isVerified?"💻":"🔒"} title="Code Plagiarism" subtitle={isVerified?"Compare code files with AST-level analysis, clone detection, and similarity scoring.":"Sign in with Google to unlock AI-powered code comparison."} subtitleColor={isVerified?"#86efac":"#64748b"} badge={isVerified?"Unlocked":"Login Required"} locked={!isVerified} delay="0.35s" color={isVerified?"34,197,94":"71,85,105"} glowColor={isVerified?"34,197,94":"71,85,105"} onClick={()=>isVerified?navigate("/compare"):navigate("/login")} />
         </div>
 
         {isGuest && (
           <div style={{marginTop:"2rem",padding:"1.2rem 1.8rem",borderRadius:18,background:"rgba(99,102,241,0.06)",border:"1px solid rgba(99,102,241,0.18)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,animation:"fadeUp 0.6s ease both 0.5s"}}>
             <div>
               <p style={{fontFamily:"Syne,sans-serif",fontWeight:700,color:"#a5b4fc",fontSize:"0.95rem",marginBottom:3}}>🚀 Unlock Code Analysis</p>
-              <p style={{fontFamily:"DM Sans,sans-serif",color:"#64748b",fontSize:"0.82rem"}}>Sign in with Google and verify via OTP to access all features.</p>
+              <p style={{fontFamily:"DM Sans,sans-serif",color:"#64748b",fontSize:"0.82rem"}}>Sign in with Google to access all features.</p>
             </div>
             <button className="signin-banner-btn" onClick={()=>navigate("/login")} style={{padding:"0.7rem 1.6rem",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6366f1,#4f46e5)",color:"#fff",fontFamily:"Syne,sans-serif",fontWeight:700,fontSize:"0.88rem",cursor:"pointer",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.35)",transition:"transform 0.2s ease,box-shadow 0.2s ease"}}>
               Sign In Free →
