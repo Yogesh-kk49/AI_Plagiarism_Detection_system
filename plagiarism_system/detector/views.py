@@ -9,7 +9,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
-from .utils.email_sender import send_email_via_brevo
+from django.core.mail import send_mail, EmailMessage
 # Google OAuth
 from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
@@ -18,6 +18,8 @@ from google.auth.transport import requests as grequests
 import itertools
 import os
 import re
+import random
+from datetime import timedelta
 from difflib import SequenceMatcher
 
 # Models
@@ -25,6 +27,7 @@ from .models import (
     UploadedDocument,
     PlagiarismReport,
     UserHistory,
+    EmailOTP,
     FeedbackSubmission
 )
 
@@ -144,23 +147,18 @@ def read_document(request, doc_id):
 @api_view(['GET'])
 def compare_documents(request, doc1_id, doc2_id):  
     try:
-        # Fetch documents using IDs from URL
         doc1 = UploadedDocument.objects.get(id=doc1_id)
         doc2 = UploadedDocument.objects.get(id=doc2_id)
 
-        # Ensure files exist in DB
         if not doc1.file or not doc2.file:
             return Response({"error": "One or both documents have no file"}, status=400)
 
-        # Get absolute file paths (VERY IMPORTANT for FileField)
         path1 = doc1.file.path
         path2 = doc2.file.path
 
-        # Check if files actually exist in media/documents
         if not os.path.exists(path1) or not os.path.exists(path2):
             return Response({"error": "File not found in media/documents folder"}, status=400)
 
-        # Extract text from files (your existing extractor)
         text1 = extract_text(path1)
         text2 = extract_text(path2)
 
@@ -186,7 +184,6 @@ def compare_documents(request, doc1_id, doc2_id):
                 },
                 status=400
             )
-        # Run plagiarism engine
         result = compare_essays(text1, text2)
         
         user_email = request.session.get("user_email")
@@ -199,7 +196,6 @@ def compare_documents(request, doc1_id, doc2_id):
                 risk_level=result.get("severity", "Low")
             )
 
-        # Save report to database
         PlagiarismReport.objects.create(
             base_document=doc1,
             compared_document=doc2,
@@ -213,7 +209,6 @@ def compare_documents(request, doc1_id, doc2_id):
         return Response({"error": "Document not found"}, status=404)
 
     except Exception as e:
-        # This will show real backend error instead of generic 500
         return Response({"error": str(e)}, status=500)
     
 @api_view(['GET'])
@@ -314,7 +309,6 @@ def ai_check(request, doc_id=None):
     text = None
     source = None
 
-    # ================= STORED DOCUMENT =================
     if doc_id is not None:
         try:
             doc = UploadedDocument.objects.get(id=doc_id)
@@ -327,19 +321,16 @@ def ai_check(request, doc_id=None):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    # ================= COPY-PASTED TEXT =================
     else:
         text = request.data.get("text", "")
         source = "pasted_text"
 
-    # ================= VALIDATION =================
     if not text or len(text.strip()) < 30:
         return Response(
             {"error": "Text too short for AI analysis"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # ================= CODE DETECTION =================
     iscode, reason = is_code(text)
 
     if iscode:
@@ -351,7 +342,6 @@ def ai_check(request, doc_id=None):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # ================= AI DETECTION =================
     result = ai_likelihood_score(text)
     user_email = request.session.get("user_email")
 
@@ -407,12 +397,10 @@ def compare_selected(request):
 
         results = []
 
-        # Compare only among selected files (NOT database)
         for doc1, doc2 in itertools.combinations(documents, 2):
             text1 = preprocess_text(extract_text(doc1.file.path))
             text2 = preprocess_text(extract_text(doc2.file.path))
 
-            # ================= CODE DETECTION =================
             code_detected_in = None
             iscode1, reason1 = is_code(text1)
             iscode2, reason2 = is_code(text2)
@@ -430,7 +418,6 @@ def compare_selected(request):
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            # ===================================================
 
             if not text1 or not text2:
                 continue
@@ -466,7 +453,6 @@ def google_login(request):
         if not token:
             return Response({"error": "Token not provided"}, status=400)
 
-        # Verify Google ID token
         idinfo = id_token.verify_oauth2_token(
             token,
             grequests.Request(),
@@ -477,14 +463,13 @@ def google_login(request):
         email   = idinfo.get("email")
         picture = idinfo.get("picture")
 
-        # Store everything in session
         request.session["user_name"]      = name
         request.session["user_email"]     = email
         request.session["user_picture"]   = picture
         request.session["google_verified"] = True
-        request.session["code_access"]    = True
+        request.session["otp_verified"]   = False
+        request.session["code_access"]    = False
 
-        # Force session save so cookie is written
         request.session.modified = True
         request.session.save()
 
@@ -493,11 +478,10 @@ def google_login(request):
             "email":   email,
             "picture": picture,
             "google":  "verified",
-            "message": "Google login successful."
+            "message": "Google login successful. Please verify OTP."
         }, status=200)
 
     except ValueError as e:
-        # Invalid token signature / expired
         print("GOOGLE TOKEN ERROR:", str(e))
         return Response({"error": "Invalid Google token"}, status=401)
 
@@ -506,19 +490,99 @@ def google_login(request):
         return Response({"error": str(e)}, status=500)
 
 
+# ─────────────────────────────────────────────
+# STEP 2: Send OTP (Gmail SMTP via Django's send_mail —
+# requires EMAIL_HOST_USER / EMAIL_HOST_PASSWORD (a Gmail
+# App Password) set in .env. Works locally; will need a
+# paid host or an HTTP-API email service if later deployed
+# on a free host that blocks outbound SMTP.)
+# ─────────────────────────────────────────────
+@api_view(['POST'])
+def send_otp(request):
+    print("SESSION DATA:", dict(request.session))
+
+    google_email    = request.session.get("user_email")
+    google_verified = request.session.get("google_verified", False)
+
+    if not google_email or not google_verified:
+        return Response({
+            "error":          "Google login required before OTP",
+            "session_user":   google_email,
+            "google_verified": google_verified
+        }, status=403)
+
+    otp = str(random.randint(100000, 999999))
+
+    EmailOTP.objects.filter(email=google_email).delete()
+    EmailOTP.objects.create(email=google_email, otp=otp)
+
+    send_mail(
+        subject="AI Plagiarism System - Code Access OTP",
+        message=f"Your OTP for Code Access is: {otp}\n\nThis OTP expires in 5 minutes.",
+        from_email=settings.EMAIL_HOST_USER,
+        recipient_list=[google_email],
+        fail_silently=False,
+    )
+
+    return Response({
+        "message": f"OTP sent to {google_email}"
+    }, status=200)
+
+
+# ─────────────────────────────────────────────
+# STEP 3: Verify OTP
+# ─────────────────────────────────────────────
+@api_view(['POST'])
+def verify_otp(request):
+    google_email = request.session.get("user_email")
+    entered_otp  = request.data.get("otp")
+
+    if not google_email:
+        return Response({"error": "Google login required before OTP"}, status=403)
+
+    if not entered_otp:
+        return Response({"error": "OTP required"}, status=400)
+
+    otp_record = EmailOTP.objects.filter(email=google_email).last()
+
+    if not otp_record:
+        return Response({"error": "No OTP found. Please request a new one."}, status=404)
+
+    if timezone.now() - otp_record.created_at > timedelta(minutes=5):
+        otp_record.delete()
+        return Response({"error": "OTP expired. Please request a new one."}, status=400)
+
+    if otp_record.otp != str(entered_otp):
+        return Response({"error": "Invalid OTP. Please try again."}, status=400)
+
+    otp_record.is_verified = True
+    otp_record.save()
+    request.session["otp_verified"] = True
+    request.session["code_access"]  = True
+    request.session.modified = True
+    request.session.save()
+
+    return Response({
+        "message": "2FA Verified Successfully",
+        "access":  "granted",
+        "email":   google_email
+    }, status=200)
+
+
 @api_view(['GET'])
 def check_auth(request):
-    # Read directly from session — no Django user auth needed
     google_verified = request.session.get("google_verified", False)
+    otp_verified    = request.session.get("otp_verified",    False)
     code_access     = request.session.get("code_access",     False)
     email           = request.session.get("user_email",      None)
     name            = request.session.get("user_name",       None)
     picture         = request.session.get("user_picture",    None)
 
-    effective_code_access = google_verified and code_access
+    effective_code_access = google_verified and otp_verified and code_access
 
     return JsonResponse({
         "google_verified": google_verified,
+        "otp_verified":    otp_verified,
         "code_access":     effective_code_access,
         "email":           email,
         "name":            name,
@@ -531,7 +595,7 @@ def check_auth(request):
 # ─────────────────────────────────────────────
 @api_view(['POST'])
 def logout(request):
-    request.session.flush()  # wipes entire session + deletes DB record
+    request.session.flush()
     return JsonResponse({"message": "Logged out successfully"}, status=200)
 
 
@@ -541,11 +605,11 @@ def logout(request):
 @api_view(['POST'])
 def code_plagiarism(request):
     google_verified = request.session.get("google_verified", False)
+    otp_verified    = request.session.get("otp_verified",    False)
 
-    # Enforce Google login
-    if not google_verified:
+    if not (google_verified and otp_verified):
         return Response({
-            "error":  "Google login required",
+            "error":  "2FA required (Google login + OTP verification)",
             "access": "denied"
         }, status=403)
 
@@ -577,6 +641,7 @@ def code_plagiarism(request):
         },
         "auth": {
             "google_verified": google_verified,
+            "otp_verified":    otp_verified,
             "access":          "granted"
         },
         "message": "Code comparison successful"
@@ -612,17 +677,19 @@ def submit_feedback(request):
 
    
     try:
-        send_email_via_brevo(
+        email = EmailMessage(
             subject=f"[Feedback] {category.upper()} from {user_name}",
-            message=(
+            body=(
                 f"Name: {user_name}\n"
                 f"Email: {user_email}\n"
                 f"Category: {category}\n\n"
                 f"Message:\n{message}"
             ),
-            to_email="ai.plagiarism49@gmail.com",
-            reply_to=user_email,
+            from_email=settings.EMAIL_HOST_USER,
+            to=["ai.plagiarism49@gmail.com"],
+            reply_to=[user_email],
         )
+        email.send()
 
     except Exception as e:
         print("EMAIL ERROR:", str(e))

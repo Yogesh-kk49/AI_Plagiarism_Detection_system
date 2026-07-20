@@ -545,7 +545,8 @@ const Card = ({ children, style={}, delay }) => (
 
 export default function CodeAnalyzer() {
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
+  const isCompact = isMobile || isTablet;
   const [code, setCode]             = useState("");
   const [language, setLanguage]     = useState("");
   const [file, setFile]             = useState(null);
@@ -654,14 +655,14 @@ export default function CodeAnalyzer() {
 
       {!authLoading && (isVerified && user
         ? <ProfileCorner user={user} onLogout={handleLogout} navigate={navigate} />
-        : <GuestCorner onLogin={()=>navigate("/login")} />
+        : !(result || error) && <GuestCorner onLogin={()=>navigate("/login")} />
       )}
 
       {/* ── TOP BAR ── */}
       <div style={{
         display:"flex", alignItems:"center", gap:20,
-        padding: isMobile ? "14px 20px" : "16px 32px",
-        flexWrap: isMobile ? "wrap" : "nowrap",
+        padding: isCompact ? "14px 20px" : "16px 32px",
+        flexWrap: isCompact ? "wrap" : "nowrap",
         borderBottom:"1px solid rgba(255,255,255,0.08)",
         flexShrink:0, position:"relative", zIndex:10,
         animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
@@ -706,8 +707,9 @@ export default function CodeAnalyzer() {
           </button>
         )}
 
-        {/* Fixed-width spacer so button never slides under the profile avatar (52px + 28px right + 8px gap) */}
-        <div style={{width:88, flexShrink:0}} />
+        {/* Fixed-width spacer so button never slides under the profile avatar / Sign In pill.
+            Avatar needs ~88px; the guest "Sign In" pill is wider, so reserve more when logged out. */}
+        <div style={{width: (isVerified || result || error) ? 88 : 150, flexShrink:0}} />
       </div>
 
       {/* Main Content */}

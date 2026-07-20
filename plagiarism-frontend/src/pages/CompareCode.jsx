@@ -772,7 +772,8 @@ const generatePDF = (result, resultMode, isPasted = false) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CompareCode() {
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
+  const isCompact = isMobile || isTablet;
   // BASE_URL now imported from "../config"
 
   const [tab,           setTab]           = useState("paste");
@@ -856,16 +857,16 @@ export default function CompareCode() {
 
       {!authLoading && (isVerified&&user
         ? <ProfileCorner user={user} onLogout={handleLogout} navigate={navigate} />
-        : <GuestCorner onLogin={()=>navigate("/login")} />
+        : !(result || apiError) && <GuestCorner onLogin={()=>navigate("/login")} />
       )}
 
       {/* ── Header ── */}
       <div style={{
-        padding: isMobile ? "14px 20px" : "16px 32px",
+        padding: isCompact ? "14px 20px" : "16px 32px",
         borderBottom:"1px solid rgba(255,255,255,0.08)",
         flexShrink:0, zIndex:10, backdropFilter:"blur(12px)",
         display:"flex", alignItems:"center", gap:20,
-        flexWrap: isMobile ? "wrap" : "nowrap",
+        flexWrap: isCompact ? "wrap" : "nowrap",
         animation:"slideDownGlow 0.5s ease both"
       }}>
         <button className="ca-back" onClick={()=>navigate(-1)} style={{
@@ -899,8 +900,9 @@ export default function CompareCode() {
           </button>
         )}
 
-        {/* Fixed-width spacer so button never slides under the profile avatar (52px + 28px right + 8px gap) */}
-        <div style={{width:88, flexShrink:0}} />
+        {/* Fixed-width spacer so button never slides under the profile avatar / Sign In pill.
+            Avatar needs ~88px; the guest "Sign In" pill is wider, so reserve more when logged out. */}
+        <div style={{width: (isVerified || result || apiError) ? 88 : 150, flexShrink:0}} />
       </div>
 
       {/* ── Body ── */}

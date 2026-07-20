@@ -3,251 +3,36 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import useResponsive from "../hooks/useResponsive";
 
-const styles = {
-  wrapper: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "1rem",
-    background: `
-      radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
-      radial-gradient(circle at 40% 60%, rgba(236, 72, 153, 0.2) 0%, transparent 50%),
-      linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)
-    `,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: "#f1f5f9",
-    overflow: "hidden",
-    boxSizing: "border-box",
+const FEATURES = [
+  {
+    num: "01",
+    title: "Essay & Document Plagiarism",
+    desc: "Cross-reference essays, paragraphs, and written content using sentence-level similarity analysis.",
+    badge: "FREE",
+    path: "/similarity",
   },
-  backgroundImages: {
-    position: "absolute",
-    inset: 0,
-    pointerEvents: "none",
-    zIndex: 1,
+  {
+    num: "02",
+    title: "AI Content Detector",
+    desc: "Estimate the probability that text was AI-generated versus human-written, with a full breakdown.",
+    badge: "FREE",
+    path: "/upload",
   },
-  bgImage: {
-    position: "absolute",
-    opacity: 0.15,
-    animation: "copyFloat 25s infinite linear",
-    filter: "blur(1px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  {
+    num: "03",
+    title: "Code Plagiarism Analyzer",
+    desc: "AST-level source comparison, clone detection, and similarity scoring across languages.",
+    badge: "LOGIN",
+    path: "/compare",
   },
-  logoContainer: {
-    width: "90px",
-    height: "90px",
-    marginBottom: "1rem",
-    position: "relative",
-    zIndex: 3,
-    flexShrink: 0,
+  {
+    num: "04",
+    title: "Analysis History",
+    desc: "Every scan you run is logged to your account — revisit past results, scores, and risk levels.",
+    badge: "LOGIN",
+    path: "/history",
   },
-  logo: {
-    width: "100%",
-    height: "100%",
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoCircle: {
-    width: "100%",
-    height: "100%",
-    borderRadius: "50%",
-    background:
-      "conic-gradient(from 0deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #3b82f6)",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    animation: "logoRotate 3s linear infinite",
-  },
-  logoGlow: {
-    width: "100%",
-    height: "100%",
-    borderRadius: "50%",
-    background:
-      "conic-gradient(from 0deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #3b82f6)",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    animation: "logoRotate 3s linear infinite",
-    filter: "blur(12px)",
-    opacity: 0.7,
-  },
-  logoIcon: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: "62px",
-    height: "62px",
-    background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))",
-    borderRadius: "50%",
-    border: "1.5px solid rgba(255,255,255,0.2)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.8rem",
-    backdropFilter: "blur(10px)",
-    zIndex: 2,
-    boxShadow: "inset 0 0 20px rgba(139,92,246,0.3)",
-  },
-  card: {
-    background: "rgba(255,255,255,0.08)",
-    backdropFilter: "blur(25px)",
-    borderRadius: "28px",
-    padding: "2.5rem 3rem",
-    maxWidth: "580px",
-    width: "90%",
-    textAlign: "center",
-    boxShadow:
-      "0 32px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)",
-    zIndex: 3,
-    animation: "fadeInUp 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-  },
-  title: {
-    fontSize: "clamp(2rem, 5vw, 3.2rem)",
-    fontWeight: "900",
-    marginBottom: "1rem",
-    background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    animation: "fadeInUp 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both",
-  },
-  subtitle: {
-    fontSize: "1.1rem",
-    marginBottom: "2rem",
-    color: "#cbd5e1",
-    animation: "fadeInUp 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s both",
-  },
-  buttonContainer: {
-    display: "flex",
-    gap: "1rem",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    alignItems: "center",
-  },
-  button: {
-    background:
-      "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%)",
-    color: "#fff",
-    border: "none",
-    padding: "1rem 2rem",
-    fontSize: "1rem",
-    fontWeight: "700",
-    borderRadius: "16px",
-    cursor: "pointer",
-    transition: "all 0.4s cubic-bezier(0.23, 1, 0.32, 1)",
-    boxShadow: "0 16px 45px rgba(59,130,246,0.4)",
-    position: "relative",
-    overflow: "hidden",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    whiteSpace: "nowrap",
-  },
-  loginButton: {
-    background:
-      "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)",
-    color: "#fff",
-    border: "none",
-    padding: "1rem 2rem",
-    fontSize: "1rem",
-    fontWeight: "700",
-    borderRadius: "16px",
-    cursor: "pointer",
-    transition: "all 0.4s cubic-bezier(0.23, 1, 0.32, 1)",
-    boxShadow: "0 16px 45px rgba(139,92,246,0.4)",
-    position: "relative",
-    overflow: "hidden",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    whiteSpace: "nowrap",
-  },
-  buttonHover: {
-    transform: "translateY(-6px) scale(1.03)",
-    boxShadow: "0 30px 60px rgba(59,130,246,0.5)",
-    background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
-  },
-  loginButtonHover: {
-    transform: "translateY(-6px) scale(1.03)",
-    boxShadow: "0 30px 60px rgba(139,92,246,0.5)",
-    background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
-  },
-  dropdownWrapper: {
-    position: "relative",
-    display: "inline-block",
-  },
-  dropdown: {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    left: "calc(100% + 12px)",
-    minWidth: "240px",
-    background: "rgba(15, 23, 42, 0.95)",
-    backdropFilter: "blur(20px)",
-    borderRadius: "16px",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)",
-    overflow: "hidden",
-    zIndex: 100,
-    animation: "dropdownIn 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-  },
-  dropdownHeader: {
-    padding: "1.2rem 1.5rem",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.9rem",
-  },
-  avatarFallback: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #8b5cf6, #3b82f6)",
-    border: "2px solid rgba(139,92,246,0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.2rem",
-    fontWeight: "700",
-    color: "#fff",
-    flexShrink: 0,
-  },
-  dropdownUsername: {
-    fontWeight: "700",
-    fontSize: "0.95rem",
-    color: "#f1f5f9",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  dropdownEmail: {
-    fontSize: "0.75rem",
-    color: "#94a3b8",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    marginTop: "2px",
-  },
-  verifiedBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "5px",
-    marginTop: "6px",
-    padding: "3px 10px",
-    borderRadius: "99px",
-    background: "rgba(34,197,94,0.1)",
-    border: "1px solid rgba(34,197,94,0.3)",
-    fontSize: "0.7rem",
-    color: "#86efac",
-    fontWeight: "600",
-  },
-};
+];
 
 export default function Home() {
   const navigate = useNavigate();
@@ -261,9 +46,6 @@ export default function Home() {
   const dropdownRef = useRef(null);
   const authRan = useRef(false);
 
-  // BASE_URL now imported from "../config"
-
-  // ✅ Check real session from backend (same as Options.jsx)
   useEffect(() => {
     if (authRan.current) return;
     authRan.current = true;
@@ -288,13 +70,8 @@ export default function Home() {
         const isVerified = data.code_access === true;
 
         if (isVerified && (data.name || data.email)) {
-          setUser({
-            name: data.name || null,
-            email: data.email || null,
-            picture: data.picture || null,
-          });
+          setUser({ name: data.name || null, email: data.email || null, picture: data.picture || null });
         } else if (isVerified) {
-          // Fallback to localStorage if session has no name/email
           try {
             const saved = localStorage.getItem("user_profile");
             if (saved) setUser(JSON.parse(saved));
@@ -305,13 +82,10 @@ export default function Home() {
           localStorage.removeItem("user_profile");
         }
       } catch {
-        // Backend unreachable — fallback to localStorage
         try {
           const verified = localStorage.getItem("verified");
           const saved = localStorage.getItem("user_profile");
-          if (verified === "true" && saved) {
-            setUser(JSON.parse(saved));
-          }
+          if (verified === "true" && saved) setUser(JSON.parse(saved));
         } catch {}
       } finally {
         setAuthChecked(true);
@@ -321,7 +95,6 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -332,197 +105,335 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Remove white borders
+  // Force-reset any scroll lock left behind by other pages, and restore it on leave
   useEffect(() => {
-    document.documentElement.style.margin = "0";
-    document.documentElement.style.padding = "0";
-    document.documentElement.style.height = "100%";
-    document.body.style.margin = "0";
-    document.body.style.padding = "0";
-    document.body.style.height = "100%";
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevBodyHeight = body.style.height;
+
+    html.style.overflow = "auto";
+    body.style.overflow = "auto";
+    html.style.height = "auto";
+    body.style.height = "auto";
+    body.style.margin = "0";
+    body.style.background = "#07080a";
+
     return () => {
-      document.body.style.overflow = "auto";
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      html.style.height = prevHtmlHeight;
+      body.style.height = prevBodyHeight;
     };
   }, []);
-
-  const docIcons = ["📄", "📃", "📜", "📚", "💻", "🔍", "✏️"];
-  const bgImages = Array.from({ length: 15 }).map((_, i) => {
-    const size = 60 + Math.random() * 40;
-    return (
-      <div
-        key={i}
-        style={{
-          ...styles.bgImage,
-          width: size,
-          height: size,
-          left: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 30}s`,
-          animationDuration: `${20 + Math.random() * 15}s`,
-          fontSize: size * 0.4,
-          transform: `rotate(${Math.random() * 360}deg)`,
-        }}
-      >
-        {docIcons[Math.floor(Math.random() * docIcons.length)]}
-      </div>
-    );
-  });
 
   const initials = user?.name
     ? user.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
     : "U";
 
+  const year = new Date().getFullYear();
+
   return (
-    <div style={styles.wrapper}>
+    <div style={styles.page}>
       <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(60px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes copyFloat {
-          0% { transform: translateY(100vh) rotate(0deg) scale(0.8); opacity: 0; }
-          10% { opacity: 0.6; }
-          90% { opacity: 0.6; }
-          100% { transform: translateY(-100px) rotate(360deg) scale(1.2); opacity: 0; }
-        }
-        @keyframes logoRotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes starPulse {
-          0%, 100% { filter: drop-shadow(0 0 6px rgba(139,92,246,0.8)) drop-shadow(0 0 12px rgba(59,130,246,0.5)); }
-          50% { filter: drop-shadow(0 0 12px rgba(236,72,153,0.9)) drop-shadow(0 0 24px rgba(139,92,246,0.7)); }
-        }
-        @keyframes dropdownIn {
-          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        * { outline: none !important; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scanline { 0% { transform: translateY(-100%); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(2000%); opacity: 0; } }
+        @keyframes dropdownIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        * { box-sizing: border-box; }
+        html, body { overflow-x: hidden; }
+        .yk-row { transition: all 0.25s ease; }
+        .yk-row:hover { background: rgba(255,255,255,0.025) !important; border-left-color: #3b82f6 !important; }
+        .yk-row:hover .yk-row-num { color: #3b82f6 !important; }
       `}</style>
 
-      <div style={styles.backgroundImages}>{bgImages}</div>
-
-      <div style={styles.logoContainer}>
-        <div style={styles.logo}>
-          <div style={styles.logoGlow}></div>
-          <div style={styles.logoCircle}></div>
-          <div style={styles.logoIcon}>
-            <img
-              src="/yk-icon.png"
-              alt="YK Product"
-              style={{ width: 32, height: 32, objectFit: "contain" }}
-            />
-          </div>
+      {/* ── NAV ── */}
+      <nav style={{ ...styles.nav, padding: isMobile ? "16px 20px" : "20px 48px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/yk-icon.png" alt="YK Product" style={{ width: 26, height: 26, objectFit: "contain" }} />
+          <span style={styles.navBrand}>PLAGIARISM<span style={{ color: "#3b82f6" }}>::</span>DETECT</span>
         </div>
-      </div>
 
-      <div style={styles.card}>
-        <h1 style={styles.title}>AI Plagiarism Detection</h1>
-        <p style={styles.subtitle}>
-          Precision-engineered AI detection for AI-generated content and plagiarism.
-        </p>
-        <div style={styles.buttonContainer}>
-          <button
-            style={{
-              ...styles.button,
-              ...(isGetStartedHovered ? styles.buttonHover : {}),
-            }}
-            onMouseEnter={() => setIsGetStartedHovered(true)}
-            onMouseLeave={() => setIsGetStartedHovered(false)}
-            onClick={() => navigate("/options")}
-          >
-            Get Started →
-          </button>
-
-          {/* Show login button only after auth check is done */}
-          {authChecked && (
-            !user ? (
+        {authChecked && (
+          !user ? (
+            <button
+              style={{ ...styles.navButton, ...(isLoginHovered ? styles.navButtonHover : {}) }}
+              onMouseEnter={() => setIsLoginHovered(true)}
+              onMouseLeave={() => setIsLoginHovered(false)}
+              onClick={() => navigate("/login")}
+            >
+              Sign In
+            </button>
+          ) : (
+            <div style={styles.dropdownWrapper} ref={dropdownRef}>
               <button
-                style={{
-                  ...styles.loginButton,
-                  ...(isLoginHovered ? styles.loginButtonHover : {}),
-                }}
+                style={{ ...styles.navButton, ...(isAccountHovered || dropdownOpen ? styles.navButtonHover : {}), display: "flex", alignItems: "center", gap: "0.5rem" }}
+                onMouseEnter={() => setIsAccountHovered(true)}
+                onMouseLeave={() => setIsAccountHovered(false)}
+                onClick={() => setDropdownOpen((p) => !p)}
+              >
+                {user.name ? user.name.split(" ")[0] : "Account"} ▾
+              </button>
+
+              {dropdownOpen && (
+                <div style={{
+                  ...styles.dropdown,
+                  ...(isMobile ? { right: "auto", left: "50%", transform: "translateX(-50%)", minWidth: "calc(100vw - 40px)", maxWidth: 320 } : {}),
+                }}>
+                  <div style={styles.dropdownHeader}>
+                    {user.picture ? (
+                      <img
+                        src={user.picture}
+                        alt={user.name || "User"}
+                        referrerPolicy="no-referrer"
+                        style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(59,130,246,0.4)", flexShrink: 0 }}
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=3b82f6&color=fff&bold=true`; }}
+                      />
+                    ) : (
+                      <div style={styles.avatarFallback}>{initials}</div>
+                    )}
+                    <div style={{ overflow: "hidden" }}>
+                      <div style={styles.dropdownUsername}>{user.name || "User"}</div>
+                      {user.email && <div style={styles.dropdownEmail}>{user.email}</div>}
+                      <div style={styles.verifiedBadge}>
+                        <span style={{ width: 6, height: 6, background: "#22c55e", display: "inline-block" }} />
+                        VERIFIED
+                      </div>
+                    </div>
+                  </div>
+                  <button style={styles.dropdownGoBtn} onClick={() => navigate("/options")}>Go to Dashboard →</button>
+                </div>
+              )}
+            </div>
+          )
+        )}
+      </nav>
+
+      {/* ── HERO ── */}
+      <section style={{ ...styles.hero, padding: isMobile ? "3rem 1.25rem 3.5rem" : "5rem 3rem 6rem", flexDirection: isMobile ? "column" : "row" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={styles.statusTag}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "blink 1.8s ease-in-out infinite" }} />
+            SYSTEM ONLINE · SCAN ENGINE READY
+          </div>
+
+          <h1 style={{ ...styles.title, fontSize: isMobile ? "2.1rem" : "3.4rem" }}>
+            Detect plagiarism.<br />Detect AI text.<br />
+            <span style={{ color: "#3b82f6" }}>In seconds.</span>
+          </h1>
+
+          <p style={{ ...styles.subtitle, fontSize: isMobile ? "0.98rem" : "1.08rem" }}>
+            A precision detection engine for essays, documents, and source code -
+            built to catch both copied content and AI-generated writing.
+          </p>
+
+          <div style={styles.buttonContainer}>
+            <button
+              style={{ ...styles.button, ...(isGetStartedHovered ? styles.buttonHover : {}) }}
+              onMouseEnter={() => setIsGetStartedHovered(true)}
+              onMouseLeave={() => setIsGetStartedHovered(false)}
+              onClick={() => navigate("/options")}
+            >
+              Get Started →
+            </button>
+            {authChecked && !user && (
+              <button
+                style={{ ...styles.loginButton, ...(isLoginHovered ? styles.loginButtonHover : {}) }}
                 onMouseEnter={() => setIsLoginHovered(true)}
                 onMouseLeave={() => setIsLoginHovered(false)}
                 onClick={() => navigate("/login")}
               >
-                Join Now ⚡
+                Join Now
               </button>
-            ) : (
-              <div style={styles.dropdownWrapper} ref={dropdownRef}>
-                <button
-                  style={{
-                    ...styles.loginButton,
-                    ...(isAccountHovered || dropdownOpen ? styles.loginButtonHover : {}),
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.6rem",
-                  }}
-                  onMouseEnter={() => setIsAccountHovered(true)}
-                  onMouseLeave={() => setIsAccountHovered(false)}
-                  onClick={() => setDropdownOpen((prev) => !prev)}
-                >
-                  View Your Account
-                </button>
-
-                {dropdownOpen && (
-                  <div style={{
-                    ...styles.dropdown,
-                    ...(isMobile ? {
-                      top: "calc(100% + 10px)",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      minWidth: "calc(100vw - 40px)",
-                      maxWidth: "320px",
-                    } : {}),
-                  }}>
-                    <div style={styles.dropdownHeader}>
-                      {/* Avatar */}
-                      {user.picture ? (
-                        <img
-                          src={user.picture}
-                          alt={user.name || "User"}
-                          referrerPolicy="no-referrer"
-                          style={{
-                            width: "44px",
-                            height: "44px",
-                            borderRadius: "50%",
-                            objectFit: "cover",
-                            border: "2px solid rgba(139,92,246,0.6)",
-                            flexShrink: 0,
-                          }}
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              user.name || "User"
-                            )}&background=6366f1&color=fff&bold=true`;
-                          }}
-                        />
-                      ) : (
-                        <div style={styles.avatarFallback}>{initials}</div>
-                      )}
-
-                      {/* Name + Email + Badge */}
-                      <div style={{ overflow: "hidden" }}>
-                        <div style={styles.dropdownUsername}>
-                          {user.name || "User"}
-                        </div>
-                        {user.email && (
-                          <div style={styles.dropdownEmail}>{user.email}</div>
-                        )}
-                        <div style={styles.verifiedBadge}>
-                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                          Verified
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          )}
+            )}
+          </div>
         </div>
-      </div>
+
+        {!isMobile && (
+          <div style={styles.heroMark}>
+            <div style={styles.heroMarkScanline} />
+            <img src="/yk-icon.png" alt="YK Product" style={{ width: 120, height: 120, objectFit: "contain", position: "relative", zIndex: 2 }} />
+            <div style={styles.heroMarkRing} />
+          </div>
+        )}
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section style={{ ...styles.featuresSection, padding: isMobile ? "0 1.25rem 4rem" : "0 3rem 6rem" }}>
+        <div style={styles.featuresHeader}>
+          <span style={styles.featuresLabel}>// AVAILABLE MODULES</span>
+          <h2 style={{ ...styles.sectionTitle, fontSize: isMobile ? "1.5rem" : "2rem" }}>Four Tools. One Account.</h2>
+        </div>
+
+        <div style={styles.featuresList}>
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className="yk-row"
+              style={{ ...styles.featureRow, animation: `fadeInUp 0.5s ease both ${0.08 + i * 0.07}s`, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}
+              onClick={() => navigate(f.path)}
+            >
+              <span className="yk-row-num" style={styles.featureNum}>{f.num}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={styles.featureRowTop}>
+                  <h3 style={styles.featureTitle}>{f.title}</h3>
+                  <span style={{ ...styles.featureBadge, ...(f.badge === "FREE" ? styles.badgeFree : styles.badgeLogin) }}>{f.badge}</span>
+                </div>
+                <p style={styles.featureDesc}>{f.desc}</p>
+              </div>
+              <span style={styles.featureArrow}>→</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ ...styles.footer, padding: isMobile ? "2rem 1.25rem" : "2.5rem 3rem", flexDirection: isMobile ? "column" : "row" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/yk-icon.png" alt="YK Product" style={{ width: 18, height: 18, objectFit: "contain" }} />
+          <span style={styles.footerText}>© {year} <strong style={{ color: "#cbd5e1" }}>YK Product</strong> - All rights reserved.</span>
+        </div>
+        <span style={styles.footerSub}>Designed · Built · Delivered</span>
+      </footer>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    width: "100%",
+    background: `
+      linear-gradient(#0d0e12 1px, transparent 1px),
+      linear-gradient(90deg, #0d0e12 1px, transparent 1px),
+      #07080a
+    `,
+    backgroundSize: "48px 48px, 48px 48px, cover",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: "#f1f5f9",
+  },
+  nav: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    position: "sticky",
+    top: 0,
+    zIndex: 30,
+    backdropFilter: "blur(14px)",
+    background: "rgba(7,8,10,0.75)",
+  },
+  navBrand: {
+    fontWeight: 700,
+    fontSize: "0.92rem",
+    letterSpacing: "0.04em",
+    color: "#e2e8f0",
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+  },
+  navButton: {
+    padding: "0.5rem 1.2rem",
+    borderRadius: 6,
+    border: "1px solid rgba(59,130,246,0.4)",
+    background: "rgba(59,130,246,0.08)",
+    color: "#93c5fd",
+    fontWeight: 600,
+    fontSize: "0.85rem",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  navButtonHover: { background: "rgba(59,130,246,0.2)", borderColor: "rgba(59,130,246,0.7)" },
+  dropdownWrapper: { position: "relative" },
+  dropdown: {
+    position: "absolute", top: "calc(100% + 10px)", right: 0, minWidth: 250,
+    background: "#0e0f13", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10,
+    padding: "1rem", boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+    animation: "dropdownIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both", zIndex: 40,
+  },
+  dropdownHeader: { display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "0.9rem" },
+  avatarFallback: {
+    width: 40, height: 40, borderRadius: 8, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontWeight: 700, fontSize: "0.9rem", color: "#fff", flexShrink: 0,
+  },
+  dropdownUsername: { fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  dropdownEmail: { fontSize: "0.76rem", color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  verifiedBadge: { display: "flex", alignItems: "center", gap: 5, fontSize: "0.68rem", color: "#86efac", marginTop: 3, fontWeight: 700, letterSpacing: "0.05em", fontFamily: "'JetBrains Mono', monospace" },
+  dropdownGoBtn: {
+    width: "100%", padding: "0.6rem", borderRadius: 6, border: "1px solid rgba(59,130,246,0.4)",
+    background: "rgba(59,130,246,0.1)", color: "#93c5fd", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer",
+  },
+  hero: { display: "flex", alignItems: "center", gap: "3rem", maxWidth: 1200, margin: "0 auto" },
+  statusTag: {
+    display: "inline-flex", alignItems: "center", gap: 8,
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+    fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", color: "#4ade80",
+    background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)",
+    padding: "0.4rem 0.8rem", borderRadius: 4, marginBottom: "1.75rem",
+  },
+  title: { fontWeight: 800, margin: "0 0 1rem", letterSpacing: "-0.02em", lineHeight: 1.12, animation: "fadeInUp 0.6s ease both" },
+  subtitle: { color: "#8b96a8", lineHeight: 1.65, margin: "0 0 2.25rem", maxWidth: 480, animation: "fadeInUp 0.6s ease both 0.1s" },
+  buttonContainer: { display: "flex", gap: "0.9rem", flexWrap: "wrap", alignItems: "center", animation: "fadeInUp 0.6s ease both 0.2s" },
+  button: {
+    background: "#3b82f6", color: "#fff", border: "none", padding: "0.85rem 1.8rem", borderRadius: 6,
+    fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
+    boxShadow: "0 4px 20px rgba(59,130,246,0.3)", transition: "all 0.2s ease",
+  },
+  buttonHover: { background: "#2563eb", transform: "translateY(-2px)", boxShadow: "0 8px 26px rgba(59,130,246,0.4)" },
+  loginButton: {
+    background: "transparent", color: "#cbd5e1", border: "1px solid rgba(255,255,255,0.18)",
+    padding: "0.85rem 1.8rem", borderRadius: 6, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  loginButtonHover: { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.35)" },
+  heroMark: {
+    width: 260, height: 260, borderRadius: "50%", flexShrink: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    position: "relative", background: "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)",
+    border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden",
+  },
+  heroMarkRing: {
+    position: "absolute", inset: 24, borderRadius: "50%", border: "1px dashed rgba(59,130,246,0.3)",
+  },
+  heroMarkScanline: {
+    position: "absolute", left: 0, right: 0, height: 2,
+    background: "linear-gradient(90deg, transparent, #3b82f6, transparent)",
+    animation: "scanline 3.5s linear infinite", zIndex: 1,
+  },
+  featuresSection: { maxWidth: 1000, margin: "0 auto" },
+  featuresHeader: { marginBottom: "2.5rem" },
+  featuresLabel: {
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontSize: "0.75rem",
+    color: "#3b82f6", letterSpacing: "0.1em", fontWeight: 700, display: "block", marginBottom: "0.6rem",
+  },
+  sectionTitle: { fontWeight: 800, margin: 0, letterSpacing: "-0.01em" },
+  featuresList: { display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" },
+  featureRow: {
+    display: "flex", gap: "1.5rem", padding: "1.5rem 1.75rem", cursor: "pointer",
+    borderLeft: "3px solid transparent", borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+  featureNum: {
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontSize: "1.3rem", fontWeight: 700,
+    color: "#334155", flexShrink: 0, width: 40, transition: "color 0.25s ease",
+  },
+  featureRowTop: { display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.35rem", flexWrap: "wrap" },
+  featureTitle: { fontSize: "1.02rem", fontWeight: 700, color: "#f1f5f9", margin: 0 },
+  featureBadge: {
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontSize: "0.65rem", fontWeight: 700,
+    padding: "2px 8px", borderRadius: 4, letterSpacing: "0.05em",
+  },
+  badgeFree: { color: "#4ade80", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" },
+  badgeLogin: { color: "#93c5fd", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)" },
+  featureDesc: { fontSize: "0.86rem", color: "#8b96a8", lineHeight: 1.55, margin: 0 },
+  featureArrow: { color: "#334155", fontSize: "1.1rem", flexShrink: 0, alignSelf: "center" },
+  footer: {
+    borderTop: "1px solid rgba(255,255,255,0.08)",
+    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+  },
+  footerText: { fontSize: "0.82rem", color: "#8b96a8" },
+  footerSub: {
+    fontSize: "0.72rem", color: "#475569", letterSpacing: "0.06em",
+    fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+  },
+};

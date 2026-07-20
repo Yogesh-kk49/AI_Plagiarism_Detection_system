@@ -240,7 +240,8 @@ const SimBtn = ({ children, onClick, disabled, cls, bg, color, shadow, style = {
 
 export default function Similarity() {
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
+  const isCompact = isMobile || isTablet;
 
   const [files,         setFiles]         = useState([]);
   const [uploadedDocs,  setUploadedDocs]  = useState([]);
@@ -860,14 +861,14 @@ const generatePDF = () => {
       {!authLoading && (
         isVerified && user
           ? <ProfileCorner user={user} onLogout={handleLogout} navigate={navigate} />
-          : <GuestCorner onLogin={() => navigate("/login")} />
+          : !(uploadedDocs.length > 0 || results.length > 0) && <GuestCorner onLogin={() => navigate("/login")} />
       )}
 
-      {/* paddingRight:100 reserves space for the fixed profile avatar (52px + 28px margin + buffer) */}
+      {/* paddingRight reserves space for the fixed profile avatar (~100px) or the wider guest "Sign In" pill (~160px) */}
       <div style={{ display:"flex", alignItems:"center", gap:20,
-        padding: isMobile ? "16px 20px" : "20px 48px",
-        paddingRight: isMobile ? 20 : 100,
-        flexWrap: isMobile ? "wrap" : "nowrap",
+        padding: isCompact ? "16px 20px" : "20px 48px",
+        paddingRight: isCompact ? 20 : (isVerified || (uploadedDocs.length > 0 || results.length > 0) ? 100 : 160),
+        flexWrap: isCompact ? "wrap" : "nowrap",
         borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0, position:"relative", zIndex:10, animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both", backdropFilter:"blur(12px)" }}>
         <button className="sim-back" onClick={() => navigate(-1)} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:999, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.4)", color:"#f87171", fontWeight:600, cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.9rem", transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}>← Back</button>
         <span style={{ fontSize:"1.3rem" }}>📊</span>

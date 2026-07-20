@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { BASE_URL } from "../config";
@@ -357,11 +357,13 @@ const LoggedInCard = ({ user, onLogout, onGoToOptions, onGoToHistory }) => (
 ══════════════════════════════════════════════════════ */
 export default function Login() {
   const navigate = useNavigate();
+  const [otp, setOtp] = useState("");
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState("info"); // info | success | error
   const [isLoading, setIsLoading] = useState(false);
   const [googleVerified, setGoogleVerified] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const otpRef = useRef(null);
 
   useEffect(() => {
     injectStyles();
@@ -386,10 +388,11 @@ export default function Login() {
     localStorage.removeItem("user_profile");
     setLoggedInUser(null);
     setGoogleVerified(false);
+    setOtp("");
     setStatus("");
   };
 
-  /* Google Login — grants access immediately, no OTP step */
+  /* STEP 1: Google Login */
   const handleGoogleSuccess = async (credentialResponse) => {
     setMsg("Verifying Google account...", "info");
     setIsLoading(true);
@@ -403,17 +406,17 @@ export default function Login() {
       const data = await res.json();
       if (res.ok) {
         setGoogleVerified(true);
-        localStorage.setItem("verified", "true");
-        setMsg(`✅ Signed in as ${data.email}`, "success");
+        setMsg(`✅ Google Verified (${data.email}). Now send OTP.`, "success");
         // Decode name/picture from JWT payload for display
-        let profile = null;
         try {
           const payload = JSON.parse(atob(credentialResponse.credential.split(".")[1]));
-          profile = { name: payload.name, email: payload.email, picture: payload.picture };
-          localStorage.setItem("user_profile", JSON.stringify(profile));
+          localStorage.setItem("user_profile", JSON.stringify({
+            name: payload.name,
+            email: payload.email,
+            picture: payload.picture,
+          }));
         } catch {}
-        if (profile) setLoggedInUser(profile);
-        setTimeout(() => navigate("/options"), 900);
+        setTimeout(() => otpRef.current?.focus(), 400);
       } else {
         setMsg(data.error || "Google login failed.", "error");
       }
@@ -422,6 +425,67 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /* STEP 2: Send OTP */
+  const sendOTP = async () => {
+    setIsLoading(true);
+    setMsg("Sending OTP to your Gmail...", "info");
+    try {
+      const res = await fetch(`${BASE_URL}/send-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg("📩 OTP sent to your Gmail. Check your inbox!", "success");
+        setTimeout(() => otpRef.current?.focus(), 200);
+      } else {
+        setMsg(data.error || "Failed to send OTP.", "error");
+      }
+    } catch {
+      setMsg("❌ Backend not reachable.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* STEP 3: Verify OTP */
+  const verifyOTP = async () => {
+    if (!otp || otp.length < 6) { setMsg("Enter the full 6-digit OTP.", "error"); return; }
+    setIsLoading(true);
+    setMsg("Verifying OTP...", "info");
+    try {
+      const res = await fetch(`${BASE_URL}/verify-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ otp }),
+      });
+      const data = await res.json();
+      if (res.ok && data.access === "granted") {
+        localStorage.setItem("verified", "true");
+        setMsg("🔓 2FA Verified! Access Unlocked!", "success");
+        const savedUser = localStorage.getItem("user_profile");
+        if (savedUser) setLoggedInUser(JSON.parse(savedUser));
+        setTimeout(() => navigate("/options"), 1200);
+      } else {
+        setMsg(data.error || "Invalid OTP. Please try again.", "error");
+      }
+    } catch {
+      setMsg("❌ OTP verification failed.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* OTP digit input — auto-submit on 6 digits */
+  const handleOtpChange = (e) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setOtp(val);
+    if (val.length === 6) setTimeout(verifyOTP, 80);
   };
 
   const statusColors = {
@@ -528,15 +592,72 @@ export default function Login() {
             margin: "0 0 0.4rem",
             letterSpacing: "-0.02em",
           }}>
-            Sign In
+            Secure 2FA Login
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>
-            Continue with your Google account
+            Google OAuth + One-Time Password required
           </p>
         </div>
 
-        {/* ── Google Login ── */}
+        {/* Steps indicator */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 8, marginBottom: "2rem",
+          animation: "fadeUp 0.6s ease both 0.15s",
+        }}>
+          {["Google", "Send OTP", "Verify"].map((label, i) => {
+            const done = i === 0 ? googleVerified : false;
+            const active = i === 0 ? !googleVerified : i === 1 ? googleVerified && !otp : googleVerified && !!otp;
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "4px 12px",
+                  borderRadius: 99,
+                  background: done
+                    ? "rgba(34,197,94,0.12)"
+                    : active ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${done ? "rgba(34,197,94,0.3)" : active ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.07)"}`,
+                  transition: "all 0.4s ease",
+                }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: "50%",
+                    background: done ? "#22c55e" : active ? "#6366f1" : "rgba(255,255,255,0.1)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 9, color: "#fff", fontWeight: 700,
+                    transition: "background 0.4s ease",
+                  }}>
+                    {done ? "✓" : i + 1}
+                  </span>
+                  <span style={{
+                    fontSize: "0.75rem", fontWeight: 600,
+                    color: done ? "#86efac" : active ? "#a5b4fc" : "#475569",
+                    fontFamily: "DM Sans, sans-serif",
+                    transition: "color 0.4s ease",
+                  }}>
+                    {label}
+                  </span>
+                </div>
+                {i < 2 && <div style={{ width: 20, height: 1, background: "rgba(255,255,255,0.1)" }} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── STEP 1: Google Login ── */}
         <div style={{ animation: "fadeUp 0.6s ease both 0.25s" }}>
+          <label style={{
+            display: "block",
+            fontFamily: "Syne, sans-serif",
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            letterSpacing: "0.15em",
+            color: "#475569",
+            textTransform: "uppercase",
+            marginBottom: "0.75rem",
+          }}>
+            Step 1 — Google Account
+          </label>
           <div style={{
             display: "flex", justifyContent: "center",
             padding: "1.2rem",
@@ -551,7 +672,7 @@ export default function Login() {
                 color: "#86efac", fontFamily: "DM Sans, sans-serif", fontWeight: 600,
               }}>
                 <span style={{ fontSize: 20 }}>✅</span>
-                Signed in — redirecting...
+                Google account verified
               </div>
             ) : (
               <GoogleLogin
@@ -565,6 +686,106 @@ export default function Login() {
             )}
           </div>
         </div>
+
+        {/* ── STEP 2 & 3: OTP ── */}
+        {googleVerified && (
+          <div className="section-appear" style={{ marginTop: "1.5rem" }}>
+            <label style={{
+              display: "block",
+              fontFamily: "Syne, sans-serif",
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              letterSpacing: "0.15em",
+              color: "#475569",
+              textTransform: "uppercase",
+              marginBottom: "0.75rem",
+            }}>
+              Step 2 — One-Time Password
+            </label>
+
+            <button
+              className="login-btn-hover"
+              onClick={sendOTP}
+              disabled={isLoading}
+              style={{
+                width: "100%", padding: "0.9rem",
+                borderRadius: 14, border: "none",
+                fontWeight: 700, cursor: isLoading ? "not-allowed" : "pointer",
+                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                color: "#fff", fontSize: "0.95rem",
+                fontFamily: "Syne, sans-serif",
+                letterSpacing: "0.04em",
+                transition: "all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+                boxShadow: "0 4px 18px rgba(99,102,241,0.3)",
+                opacity: isLoading ? 0.7 : 1,
+              }}
+            >
+              {isLoading ? <><Spinner />Sending...</> : "Send OTP to My Gmail"}
+            </button>
+
+            {/* OTP input */}
+            <div style={{ marginTop: "1rem" }}>
+              <label style={{
+                display: "block",
+                fontFamily: "Syne, sans-serif",
+                fontSize: "0.7rem", fontWeight: 700,
+                letterSpacing: "0.15em", color: "#475569",
+                textTransform: "uppercase", marginBottom: "0.6rem",
+              }}>
+                Step 3 — Enter 6-Digit OTP
+              </label>
+              <input
+                ref={otpRef}
+                className="otp-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="_ _ _ _ _ _"
+                value={otp}
+                onChange={handleOtpChange}
+                maxLength={6}
+                style={{
+                  width: "100%", padding: "1rem 1.2rem",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.03)",
+                  color: "#f1f5f9",
+                  outline: "none",
+                  fontSize: "1.4rem",
+                  fontFamily: "Syne, monospace",
+                  fontWeight: 700,
+                  letterSpacing: "0.4em",
+                  textAlign: "center",
+                  transition: "all 0.2s ease",
+                }}
+              />
+            </div>
+
+            <button
+              className="login-btn-hover"
+              onClick={verifyOTP}
+              disabled={isLoading || otp.length < 6}
+              style={{
+                width: "100%", padding: "1rem",
+                borderRadius: 14, border: "none",
+                fontWeight: 700,
+                cursor: isLoading || otp.length < 6 ? "not-allowed" : "pointer",
+                background: otp.length === 6
+                  ? "linear-gradient(135deg, #22c55e, #16a34a)"
+                  : "rgba(255,255,255,0.05)",
+                color: otp.length === 6 ? "#fff" : "#475569",
+                fontSize: "0.95rem",
+                fontFamily: "Syne, sans-serif",
+                letterSpacing: "0.04em",
+                marginTop: 12,
+                transition: "all 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+                boxShadow: otp.length === 6 ? "0 4px 18px rgba(34,197,94,0.3)" : "none",
+                animation: otp.length === 6 ? "pulse-ring 1.5s ease-in-out infinite" : "none",
+              }}
+            >
+              {isLoading ? <><Spinner />Verifying...</> : "Verify OTP & Unlock 🔓"}
+            </button>
+          </div>
+        )}
 
         {/* Status message */}
         {status && (

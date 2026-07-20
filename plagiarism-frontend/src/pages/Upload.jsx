@@ -575,7 +575,8 @@ const DownloadPDFButton = ({ aiResult, pdfTargetRef, fileName, activeTab }) => {
 
 export default function Upload() {
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
+  const isCompact = isMobile || isTablet;
   const [file, setFile]               = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState(null);
   const [aiResult, setAiResult]       = useState(null);
@@ -690,15 +691,15 @@ export default function Upload() {
       {!authLoading && (
         isVerified && user
           ? <ProfileCorner user={user} onLogout={handleLogout} navigate={navigate} />
-          : <GuestCorner onLogin={() => navigate("/login")} />
+          : !(aiResult || error) && <GuestCorner onLogin={() => navigate("/login")} />
       )}
 
       {/* ── TOP BAR ── */}
       <div style={{
         display:"flex", alignItems:"center", gap:20,
-        padding: isMobile ? "16px 20px" : "20px 48px",
-        paddingRight: isMobile ? 20 : 100,
-        flexWrap: isMobile ? "wrap" : "nowrap",
+        padding: isCompact ? "16px 20px" : "20px 48px",
+        paddingRight: isCompact ? 20 : (isVerified || (aiResult || error) ? 100 : 160),
+        flexWrap: isCompact ? "wrap" : "nowrap",
         borderBottom:"1px solid rgba(255,255,255,0.08)",
         flexShrink:0, position:"relative", zIndex:10,
         animation:"fadeUpSmooth 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
